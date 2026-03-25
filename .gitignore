@@ -1,0 +1,28 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# env
+.env
+.env.local
+.env.*.local
+app/.env.local
+app/.env*.local
+
+# hardhat
+artifacts
+cache
+coverage
+typechain-types
+ignition/deployments
+
+# next
+app/.next
+app/out
+
+# misc
+dist
+build
+.DS_Store
+*.log
+*.tsbuildinfo
