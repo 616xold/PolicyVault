@@ -157,8 +157,207 @@ describe('PolicyVault M1.2 deposit and withdraw', async () => {
   });
 });
 
+describe('PolicyVault M1.3 create, revoke, and charge', async () => {
+  it('creates a policy with a deterministic id, stored state, nonce increment, and PolicyCreated', async () => {
+    const { networkHelpers, viem, owner, receiver, vault } = await deployFixture();
+    const cap = 25n * USDC;
+    const expiresAt = (await latestTimestamp(networkHelpers)) + 3600n;
+    const expectedPolicyId = await vault.read.computePolicyId([
+      owner.account.address,
+      receiver.account.address,
+      cap,
+      expiresAt,
+      0n,
+    ]);
+
+    await viem.assertions.emitWithArgs(
+      vault.write.createPolicy([receiver.account.address, cap, expiresAt]),
+      vault,
+      'PolicyCreated',
+      [
+        expectedPolicyId,
+        getAddress(owner.account.address),
+        getAddress(receiver.account.address),
+        cap,
+        expiresAt,
+      ],
+    );
+
+    const policy = await vault.read.getPolicy([expectedPolicyId]);
+
+    assert.equal(await vault.read.nextPolicyNonce([owner.account.address]), 1n);
+    assert.equal(policy.owner, getAddress(owner.account.address));
+    assert.equal(policy.beneficiary, getAddress(receiver.account.address));
+    assert.equal(policy.cap, cap);
+    assert.equal(policy.spent, 0n);
+    assert.equal(policy.expiresAt, expiresAt);
+    assert.equal(policy.revoked, false);
+  });
+
+  it('reverts when createPolicy uses an invalid beneficiary, cap, or expiry', async () => {
+    const { networkHelpers, viem, receiver, vault } = await deployFixture();
+    const validCap = 10n * USDC;
+    const now = await latestTimestamp(networkHelpers);
+    const futureExpiry = now + 3600n;
+
+    await viem.assertions.revertWithCustomError(
+      vault.write.createPolicy([zeroAddress, validCap, futureExpiry]),
+      vault,
+      'ZeroAddress',
+    );
+
+    await viem.assertions.revertWithCustomError(
+      vault.write.createPolicy([receiver.account.address, 0n, futureExpiry]),
+      vault,
+      'ZeroAmount',
+    );
+
+    await viem.assertions.revertWithCustomError(
+      vault.write.createPolicy([receiver.account.address, validCap, now]),
+      vault,
+      'InvalidExpiry',
+    );
+  });
+
+  it('lets the owner revoke once, keeps remaining unchanged, and emits PolicyRevoked', async () => {
+    const { networkHelpers, viem, publicClient, owner, receiver, vault } = await deployFixture();
+    const { policyId, cap } = await createPolicy({
+      networkHelpers,
+      owner,
+      publicClient,
+      receiver,
+      vault,
+    });
+
+    await viem.assertions.emitWithArgs(
+      vault.write.revokePolicy([policyId]),
+      vault,
+      'PolicyRevoked',
+      [policyId, getAddress(owner.account.address), getAddress(receiver.account.address)],
+    );
+
+    const policy = await vault.read.getPolicy([policyId]);
+
+    assert.equal(policy.revoked, true);
+    assert.equal(await vault.read.remaining([policyId]), cap);
+  });
+
+  it('reverts when a non-owner revokes or when the policy is already revoked', async () => {
+    const { networkHelpers, viem, publicClient, owner, receiver, outsider, vault } =
+      await deployFixture();
+    const { policyId } = await createPolicy({
+      networkHelpers,
+      owner,
+      publicClient,
+      receiver,
+      vault,
+    });
+
+    await viem.assertions.revertWithCustomErrorWithArgs(
+      vault.write.revokePolicy([policyId], { account: outsider.account }),
+      vault,
+      'NotPolicyOwner',
+      [policyId, getAddress(outsider.account.address)],
+    );
+
+    await waitForTransaction(publicClient, await vault.write.revokePolicy([policyId]));
+
+    await viem.assertions.revertWithCustomErrorWithArgs(
+      vault.write.revokePolicy([policyId]),
+      vault,
+      'PolicyIsRevoked',
+      [policyId],
+    );
+  });
+
+  it('lets the beneficiary charge within cap, updates post-state balances, and emits Charged', async () => {
+    const { networkHelpers, viem, publicClient, owner, receiver, token, vault } =
+      await deployFixture();
+    const deposited = 18n * USDC;
+    const cap = 12n * USDC;
+    const charged = 7n * USDC;
+
+    await approveAndDeposit({ publicClient, token, vault }, deposited);
+
+    const { policyId } = await createPolicy(
+      {
+        networkHelpers,
+        owner,
+        publicClient,
+        receiver,
+        vault,
+      },
+      { cap },
+    );
+
+    await viem.assertions.emitWithArgs(
+      vault.write.charge([policyId, charged], { account: receiver.account }),
+      vault,
+      'Charged',
+      [
+        policyId,
+        getAddress(owner.account.address),
+        getAddress(receiver.account.address),
+        charged,
+        charged,
+        cap - charged,
+      ],
+    );
+
+    const policy = await vault.read.getPolicy([policyId]);
+
+    assert.equal(await vault.read.vaultBalanceOf([owner.account.address]), deposited - charged);
+    assert.equal(await vault.read.remaining([policyId]), cap - charged);
+    assert.equal(await token.read.balanceOf([receiver.account.address]), charged);
+    assert.equal(await token.read.balanceOf([vault.address]), deposited - charged);
+    assert.equal(policy.spent, charged);
+    assert.equal(policy.revoked, false);
+  });
+
+  it('reverts when a non-beneficiary charges and when current vault funding is insufficient', async () => {
+    const { networkHelpers, viem, publicClient, owner, receiver, outsider, token, vault } =
+      await deployFixture();
+    const deposited = 5n * USDC;
+    const requested = deposited + 1n;
+    const cap = 9n * USDC;
+
+    await approveAndDeposit({ publicClient, token, vault }, deposited);
+
+    const { policyId } = await createPolicy(
+      {
+        networkHelpers,
+        owner,
+        publicClient,
+        receiver,
+        vault,
+      },
+      { cap },
+    );
+
+    await viem.assertions.revertWithCustomErrorWithArgs(
+      vault.write.charge([policyId, 1n * USDC], { account: outsider.account }),
+      vault,
+      'NotBeneficiary',
+      [policyId, getAddress(outsider.account.address)],
+    );
+
+    await viem.assertions.revertWithCustomErrorWithArgs(
+      vault.write.charge([policyId, requested], { account: receiver.account }),
+      vault,
+      'InsufficientVaultBalance',
+      [requested, deposited],
+    );
+
+    const policy = await vault.read.getPolicy([policyId]);
+
+    assert.equal(await vault.read.vaultBalanceOf([owner.account.address]), deposited);
+    assert.equal(await vault.read.remaining([policyId]), cap);
+    assert.equal(policy.spent, 0n);
+  });
+});
+
 async function deployFixture() {
-  const { viem } = await network.connect();
+  const { networkHelpers, viem } = await network.connect();
   const publicClient = await viem.getPublicClient();
   const [owner, receiver, outsider] = await viem.getWalletClients();
 
@@ -174,7 +373,35 @@ async function deployFixture() {
     await token.write.mint([owner.account.address, INITIAL_MINT], { account: owner.account }),
   );
 
-  return { viem, publicClient, owner, receiver, outsider, token, vault };
+  return { networkHelpers, viem, publicClient, owner, receiver, outsider, token, vault };
+}
+
+async function createPolicy(
+  fixture: Pick<Fixture, 'networkHelpers' | 'owner' | 'publicClient' | 'receiver' | 'vault'>,
+  overrides: {
+    beneficiary?: `0x${string}`;
+    cap?: bigint;
+    expiresAt?: bigint;
+  } = {},
+) {
+  const beneficiary = overrides.beneficiary ?? fixture.receiver.account.address;
+  const cap = overrides.cap ?? 25n * USDC;
+  const expiresAt = overrides.expiresAt ?? (await latestTimestamp(fixture.networkHelpers)) + 3600n;
+  const nonce = await fixture.vault.read.nextPolicyNonce([fixture.owner.account.address]);
+  const policyId = await fixture.vault.read.computePolicyId([
+    fixture.owner.account.address,
+    beneficiary,
+    cap,
+    expiresAt,
+    nonce,
+  ]);
+
+  await waitForTransaction(
+    fixture.publicClient,
+    await fixture.vault.write.createPolicy([beneficiary, cap, expiresAt]),
+  );
+
+  return { beneficiary, cap, expiresAt, nonce, policyId };
 }
 
 async function approveAndDeposit(
@@ -196,6 +423,10 @@ async function approve(
 
 async function waitForTransaction(publicClient: Fixture['publicClient'], hash: `0x${string}`) {
   await publicClient.waitForTransactionReceipt({ hash });
+}
+
+async function latestTimestamp(networkHelpers: Fixture['networkHelpers']) {
+  return BigInt(await networkHelpers.time.latest());
 }
 
 const zeroAddress = '0x0000000000000000000000000000000000000000';

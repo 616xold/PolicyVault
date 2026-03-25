@@ -23,6 +23,9 @@ Purpose: bounded owner-funded spending with beneficiary-specific policies.
 - `revokePolicy`
 - `charge`
 
+`createPolicy` records an authorization ceiling, not a funding guarantee. The owner's current vault
+balance is enforced later by `charge`, not at policy creation time.
+
 ### View actions
 
 - `vaultBalanceOf`
@@ -36,11 +39,15 @@ Purpose: bounded owner-funded spending with beneficiary-specific policies.
 The UI and demo should be able to reconstruct the main story from events alone:
 
 - owner deposited with the post-state vault balance in `Deposited(owner, amount, newVaultBalance)`
-- policy created
-- beneficiary charged
-- owner revoked
+- policy creation is visible in `PolicyCreated(policyId, owner, beneficiary, cap, expiresAt)`
+- beneficiary charging is visible in `Charged(policyId, owner, beneficiary, amount, spent, remaining)`
+  where `spent` and `remaining` are post-state values
+- owner revocation is visible in `PolicyRevoked(policyId, owner, beneficiary)`
 - owner withdrew with the post-state vault balance in
   `Withdrawn(owner, receiver, amount, newVaultBalance)`
+
+`remaining(policyId)` is always defined as `cap - spent` for an existing policy, even after that
+policy has been revoked or expired.
 
 ### Custom errors
 

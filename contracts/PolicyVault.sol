@@ -4,6 +4,7 @@ pragma solidity ^0.8.34;
 import { IERC20 } from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import { IERC20Permit } from '@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol';
 import { SafeERC20 } from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import { SafeCast } from '@openzeppelin/contracts/utils/math/SafeCast.sol';
 import { ReentrancyGuard } from '@openzeppelin/contracts/utils/ReentrancyGuard.sol';
 
 import { IPolicyVault } from './interfaces/IPolicyVault.sol';
@@ -72,45 +73,63 @@ contract PolicyVault is IPolicyVault, ReentrancyGuard {
         address beneficiary,
         uint256 cap,
         uint64 expiresAt
-    ) external returns (bytes32 policyId) {
-        /// TODO(EP-0001/M1.3): implement policy creation.
-        /// Expected shape:
-        /// 1. validate beneficiary, cap, expiry
-        /// 2. compute policy id from owner + nonce
-        /// 3. persist Policy
-        /// 4. increment owner nonce
-        /// 5. emit PolicyCreated
-        beneficiary;
-        cap;
-        expiresAt;
-        policyId = bytes32(0);
-        revert NotImplemented();
+    ) external nonReentrant returns (bytes32 policyId) {
+        _requireNonZeroAddress(beneficiary);
+        _requirePositiveAmount(cap);
+        _requireFutureExpiry(expiresAt);
+
+        uint256 nonce = _ownerNonce[msg.sender];
+        policyId = computePolicyId(msg.sender, beneficiary, cap, expiresAt, nonce);
+
+        _policies[policyId] = Policy({
+            owner: msg.sender,
+            beneficiary: beneficiary,
+            cap: SafeCast.toUint128(cap),
+            spent: 0,
+            expiresAt: expiresAt,
+            revoked: false
+        });
+
+        _ownerNonce[msg.sender] = nonce + 1;
+
+        emit PolicyCreated(policyId, msg.sender, beneficiary, cap, expiresAt);
     }
 
-    function revokePolicy(bytes32 policyId) external {
-        /// TODO(EP-0001/M1.3): implement policy revocation.
-        /// Expected shape:
-        /// 1. load policy
-        /// 2. ensure caller is owner
-        /// 3. mark revoked
-        /// 4. emit PolicyRevoked
-        policyId;
-        revert NotImplemented();
+    function revokePolicy(bytes32 policyId) external nonReentrant {
+        Policy storage policy = _requirePolicyOwner(policyId, msg.sender);
+        if (policy.revoked) revert PolicyIsRevoked(policyId);
+
+        policy.revoked = true;
+
+        emit PolicyRevoked(policyId, policy.owner, policy.beneficiary);
     }
 
     function charge(bytes32 policyId, uint256 amount) external nonReentrant {
-        /// TODO(EP-0001/M1.3): implement beneficiary charge.
-        /// Expected shape:
-        /// 1. validate amount > 0
-        /// 2. load policy and ensure caller is beneficiary
-        /// 3. enforce not revoked, not expired, within cap
-        /// 4. enforce owner vault balance
-        /// 5. update spent and owner vault balance
-        /// 6. transfer tokens to beneficiary
-        /// 7. emit Charged
-        policyId;
-        amount;
-        revert NotImplemented();
+        _requirePositiveAmount(amount);
+
+        Policy storage policy = _requireActivePolicy(policyId, msg.sender);
+        uint256 remainingAmount = uint256(policy.cap) - uint256(policy.spent);
+        if (amount > remainingAmount) revert CapExceeded(policyId, amount, remainingAmount);
+
+        _requireVaultBalance(policy.owner, amount);
+
+        uint256 newSpent = uint256(policy.spent) + amount;
+        uint256 newVaultBalance = _vaultBalance[policy.owner] - amount;
+        uint256 remainingAfterCharge = remainingAmount - amount;
+
+        policy.spent = SafeCast.toUint128(newSpent);
+        _vaultBalance[policy.owner] = newVaultBalance;
+
+        asset.safeTransfer(policy.beneficiary, amount);
+
+        emit Charged(
+            policyId,
+            policy.owner,
+            policy.beneficiary,
+            amount,
+            newSpent,
+            remainingAfterCharge
+        );
     }
 
     function vaultBalanceOf(address owner) external view returns (uint256) {
@@ -164,6 +183,10 @@ contract PolicyVault is IPolicyVault, ReentrancyGuard {
     function _requireVaultBalance(address owner, uint256 requested) internal view {
         uint256 available = _vaultBalance[owner];
         if (requested > available) revert InsufficientVaultBalance(requested, available);
+    }
+
+    function _requireFutureExpiry(uint64 expiresAt) internal view {
+        if (expiresAt <= block.timestamp) revert InvalidExpiry();
     }
 
     function _requirePositiveAmount(uint256 amount) internal pure {

@@ -11,7 +11,7 @@ The user-visible outcome is that an owner can fund a vault, create a beneficiary
 - [ ] M1.1 finalize the public interface, storage, events, and errors
 - [x] 2026-03-25T22:24:38Z M1.2 implement approve + deposit and withdraw, add focused deposit/withdraw tests, and validate post-state `Deposited`/`Withdrawn` events
 - [x] 2026-03-25T23:28:41Z M1.2 optional hardening pass: strengthen the missing-allowance deposit coverage with unchanged-balance assertions, prove a second wallet cannot withdraw another owner's funded balance, and keep the contract unchanged because the tests exposed no deposit/withdraw bug
-- [ ] M1.3 implement policy create, revoke, and charge
+- [x] 2026-03-25T23:47:07Z M1.3 implement `createPolicy`, `revokePolicy`, and `charge`, add focused happy/failure tests for each path, and keep the public contract surface stable while documenting post-state `Charged` semantics and the "cap is not pre-funded" rule
 - [ ] M1.4 add first contract tests for happy and failure paths
 
 ## Surprises & Discoveries
@@ -24,6 +24,10 @@ identifier collision, so M1.2 needed a minimal interface cleanup before any test
 OpenZeppelin `ERC20InsufficientAllowance` custom error from `MockUSDC` even when the revert
 originates inside `PolicyVault.deposit` through `safeTransferFrom`, so the allowance-failure test
 can be precise instead of regex-only.
+
+2026-03-25T23:47:07Z: Hardhat's `networkHelpers.time.latest()` returns a number in this setup, so
+the focused M1.3 tests needed an explicit `BigInt(...)` bridge before they could drive `uint64`
+expiry inputs without mixed-type errors in TypeScript.
 
 Potential places to watch:
 
@@ -47,6 +51,12 @@ Potential places to watch:
 - 2026-03-25T23:28:41Z: keep this pass test-only. The current M1.2 deposit/withdraw implementation
   already preserves owner-scoped vault accounting and safe CEI ordering, so interview credibility is
   better served by proving those invariants with tighter tests than by refactoring the contract.
+- 2026-03-25T23:47:07Z: keep the public interface unchanged for M1.3. `createPolicy` still accepts
+  a `uint256 cap`, but the stored packed field uses OpenZeppelin `SafeCast.toUint128` so oversized
+  caps cannot silently truncate.
+- 2026-03-25T23:47:07Z: preserve the product rule that a policy cap is an authorization ceiling, not
+  a pre-funded escrow promise. `createPolicy` does not check owner vault funding, while `charge`
+  separately enforces current vault balance and emits post-state `spent` and `remaining`.
 
 ## Context and Orientation
 

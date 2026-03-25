@@ -26,9 +26,21 @@ Even though the asset is an ERC-20, external token transfer is still an interact
 
 Do not add owner-admin drains, pausers, or privileged backdoors for the interview MVP.
 
+### 6. Cap and funding are separate checks
+
+`createPolicy` does not lock or reserve `cap` worth of tokens for a beneficiary. The policy cap is
+an authorization ceiling, and `charge` separately enforces the owner's current vault balance at the
+moment of execution.
+
+### 7. Checks-effects-interactions on token-moving paths
+
+`withdraw` and `charge` both update contract state before calling `safeTransfer`, so the stored
+vault balance and policy spend stay ahead of the external token transfer boundary.
+
 ## Things to say in the interview
 
 - broad wallet approvals can be dangerous because the spender can often move funds directly from the wallet within the allowance
 - PolicyVault narrows that risk by moving funds into a contract with explicit on-chain policy checks
 - permit improves UX by removing the extra approval transaction for tokens that support ERC-2612
 - `charge` is still a token-moving path, so reentrancy thinking and ordering still matter
+- the policy cap is an authorization ceiling, not a promise that the vault is already funded to that full amount
