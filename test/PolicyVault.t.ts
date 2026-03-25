@@ -17,10 +17,23 @@ describe('PolicyVault M1.2 deposit and withdraw', async () => {
   });
 
   it('reverts when depositing without allowance', async () => {
-    const { vault } = await deployFixture();
+    const { viem, owner, token, vault } = await deployFixture();
     const amount = 10n * USDC;
 
-    await assert.rejects(vault.write.deposit([amount]), /ERC20InsufficientAllowance/);
+    assert.equal(await vault.read.vaultBalanceOf([owner.account.address]), 0n);
+    assert.equal(await token.read.balanceOf([owner.account.address]), INITIAL_MINT);
+    assert.equal(await token.read.balanceOf([vault.address]), 0n);
+
+    await viem.assertions.revertWithCustomErrorWithArgs(
+      vault.write.deposit([amount]),
+      token,
+      'ERC20InsufficientAllowance',
+      [getAddress(vault.address), 0n, amount],
+    );
+
+    assert.equal(await vault.read.vaultBalanceOf([owner.account.address]), 0n);
+    assert.equal(await token.read.balanceOf([owner.account.address]), INITIAL_MINT);
+    assert.equal(await token.read.balanceOf([vault.address]), 0n);
   });
 
   it('allows approve plus deposit, updates balances, and emits Deposited', async () => {
@@ -97,6 +110,27 @@ describe('PolicyVault M1.2 deposit and withdraw', async () => {
     );
   });
 
+  it('does not let a second wallet withdraw from another owner-funded vault balance', async () => {
+    const { viem, publicClient, owner, outsider, token, vault } = await deployFixture();
+    const deposited = 11n * USDC;
+    const requested = 3n * USDC;
+
+    await approveAndDeposit({ publicClient, token, vault }, deposited);
+
+    await viem.assertions.revertWithCustomErrorWithArgs(
+      vault.write.withdraw([requested, outsider.account.address], { account: outsider.account }),
+      vault,
+      'InsufficientVaultBalance',
+      [requested, 0n],
+    );
+
+    assert.equal(await vault.read.vaultBalanceOf([owner.account.address]), deposited);
+    assert.equal(await vault.read.vaultBalanceOf([outsider.account.address]), 0n);
+    assert.equal(await token.read.balanceOf([owner.account.address]), INITIAL_MINT - deposited);
+    assert.equal(await token.read.balanceOf([outsider.account.address]), 0n);
+    assert.equal(await token.read.balanceOf([vault.address]), deposited);
+  });
+
   it('withdraws to the receiver, updates balances, and emits Withdrawn', async () => {
     const { viem, publicClient, owner, receiver, token, vault } = await deployFixture();
     const deposited = 20n * USDC;
@@ -126,7 +160,7 @@ describe('PolicyVault M1.2 deposit and withdraw', async () => {
 async function deployFixture() {
   const { viem } = await network.connect();
   const publicClient = await viem.getPublicClient();
-  const [owner, receiver] = await viem.getWalletClients();
+  const [owner, receiver, outsider] = await viem.getWalletClients();
 
   const token = await viem.deployContract('MockUSDC', [], {
     client: { public: publicClient, wallet: owner },
@@ -140,7 +174,7 @@ async function deployFixture() {
     await token.write.mint([owner.account.address, INITIAL_MINT], { account: owner.account }),
   );
 
-  return { viem, publicClient, owner, receiver, token, vault };
+  return { viem, publicClient, owner, receiver, outsider, token, vault };
 }
 
 async function approveAndDeposit(

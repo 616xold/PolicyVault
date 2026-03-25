@@ -10,6 +10,7 @@ The user-visible outcome is that an owner can fund a vault, create a beneficiary
 
 - [ ] M1.1 finalize the public interface, storage, events, and errors
 - [x] 2026-03-25T22:24:38Z M1.2 implement approve + deposit and withdraw, add focused deposit/withdraw tests, and validate post-state `Deposited`/`Withdrawn` events
+- [x] 2026-03-25T23:28:41Z M1.2 optional hardening pass: strengthen the missing-allowance deposit coverage with unchanged-balance assertions, prove a second wallet cannot withdraw another owner's funded balance, and keep the contract unchanged because the tests exposed no deposit/withdraw bug
 - [ ] M1.3 implement policy create, revoke, and charge
 - [ ] M1.4 add first contract tests for happy and failure paths
 
@@ -18,6 +19,11 @@ The user-visible outcome is that an owner can fund a vault, create a beneficiary
 2026-03-25T22:24:38Z: the scaffold could not compile because `IPolicyVault` declared both
 `error PolicyRevoked(...)` and `event PolicyRevoked(...)`. Solidity treats that as an
 identifier collision, so M1.2 needed a minimal interface cleanup before any tests could run.
+
+2026-03-25T23:28:41Z: the Hardhat viem assertions harness can decode the bubbled
+OpenZeppelin `ERC20InsufficientAllowance` custom error from `MockUSDC` even when the revert
+originates inside `PolicyVault.deposit` through `safeTransferFrom`, so the allowance-failure test
+can be precise instead of regex-only.
 
 Potential places to watch:
 
@@ -38,6 +44,9 @@ Potential places to watch:
 - 2026-03-25T22:24:38Z: `deposit` credits `_vaultBalance` before `safeTransferFrom` and `withdraw`
   debits before `safeTransfer`, so both funding-path events expose post-state balances while keeping
   checks-effects-interactions ordering.
+- 2026-03-25T23:28:41Z: keep this pass test-only. The current M1.2 deposit/withdraw implementation
+  already preserves owner-scoped vault accounting and safe CEI ordering, so interview credibility is
+  better served by proving those invariants with tighter tests than by refactoring the contract.
 
 ## Context and Orientation
 
