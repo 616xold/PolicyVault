@@ -25,14 +25,14 @@ contract PolicyVault is IPolicyVault, ReentrancyGuard {
     }
 
     function deposit(uint256 amount) external nonReentrant {
-        /// TODO(EP-0001/M1.2): implement approve + deposit path.
-        /// Expected shape:
-        /// 1. validate amount > 0
-        /// 2. increment owner vault balance
-        /// 3. pull tokens via SafeERC20.safeTransferFrom
-        /// 4. emit Deposited
-        amount;
-        revert NotImplemented();
+        _requirePositiveAmount(amount);
+
+        uint256 newVaultBalance = _vaultBalance[msg.sender] + amount;
+        _vaultBalance[msg.sender] = newVaultBalance;
+
+        asset.safeTransferFrom(msg.sender, address(this), amount);
+
+        emit Deposited(msg.sender, amount, newVaultBalance);
     }
 
     function depositWithPermit(
@@ -56,16 +56,16 @@ contract PolicyVault is IPolicyVault, ReentrancyGuard {
     }
 
     function withdraw(uint256 amount, address receiver) external nonReentrant {
-        /// TODO(EP-0001/M1.2): implement owner withdraw path.
-        /// Expected shape:
-        /// 1. validate receiver != 0 and amount > 0
-        /// 2. check owner vault balance
-        /// 3. decrease owner balance
-        /// 4. push tokens via SafeERC20.safeTransfer
-        /// 5. emit Withdrawn
-        amount;
-        receiver;
-        revert NotImplemented();
+        _requirePositiveAmount(amount);
+        _requireNonZeroAddress(receiver);
+        _requireVaultBalance(msg.sender, amount);
+
+        uint256 newVaultBalance = _vaultBalance[msg.sender] - amount;
+        _vaultBalance[msg.sender] = newVaultBalance;
+
+        asset.safeTransfer(receiver, amount);
+
+        emit Withdrawn(msg.sender, receiver, amount, newVaultBalance);
     }
 
     function createPolicy(
@@ -154,7 +154,7 @@ contract PolicyVault is IPolicyVault, ReentrancyGuard {
         Policy storage policy = _policies[policyId];
         if (policy.owner == address(0)) revert PolicyNotFound(policyId);
         if (policy.beneficiary != caller) revert NotBeneficiary(policyId, caller);
-        if (policy.revoked) revert PolicyRevoked(policyId);
+        if (policy.revoked) revert PolicyIsRevoked(policyId);
         if (block.timestamp > policy.expiresAt) {
             revert PolicyExpired(policyId, policy.expiresAt, uint64(block.timestamp));
         }
@@ -168,5 +168,9 @@ contract PolicyVault is IPolicyVault, ReentrancyGuard {
 
     function _requirePositiveAmount(uint256 amount) internal pure {
         if (amount == 0) revert ZeroAmount();
+    }
+
+    function _requireNonZeroAddress(address value) internal pure {
+        if (value == address(0)) revert ZeroAddress();
     }
 }

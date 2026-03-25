@@ -20,7 +20,7 @@ interface IPolicyVault {
     error NotPolicyOwner(bytes32 policyId, address caller);
     error NotBeneficiary(bytes32 policyId, address caller);
     error PolicyExpired(bytes32 policyId, uint64 expiresAt, uint64 nowTs);
-    error PolicyRevoked(bytes32 policyId);
+    error PolicyIsRevoked(bytes32 policyId);
     error InsufficientVaultBalance(uint256 requested, uint256 available);
     error CapExceeded(bytes32 policyId, uint256 requested, uint256 remaining);
     error NotImplemented();

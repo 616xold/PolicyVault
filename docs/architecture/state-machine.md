@@ -10,6 +10,9 @@ Transitions:
 - `charge`: decreases owner vault balance and increases policy spent
 - `withdraw`: decreases owner vault balance
 
+For the user-visible funding paths, `Deposited` and `Withdrawn` both report the
+post-state vault balance so logs match the new stored balance.
+
 ## Policy state
 
 A policy is valid if:

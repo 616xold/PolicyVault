@@ -9,13 +9,15 @@ The user-visible outcome is that an owner can fund a vault, create a beneficiary
 ## Progress
 
 - [ ] M1.1 finalize the public interface, storage, events, and errors
-- [ ] M1.2 implement approve + deposit and withdraw
+- [x] 2026-03-25T22:24:38Z M1.2 implement approve + deposit and withdraw, add focused deposit/withdraw tests, and validate post-state `Deposited`/`Withdrawn` events
 - [ ] M1.3 implement policy create, revoke, and charge
 - [ ] M1.4 add first contract tests for happy and failure paths
 
 ## Surprises & Discoveries
 
-None yet.
+2026-03-25T22:24:38Z: the scaffold could not compile because `IPolicyVault` declared both
+`error PolicyRevoked(...)` and `event PolicyRevoked(...)`. Solidity treats that as an
+identifier collision, so M1.2 needed a minimal interface cleanup before any tests could run.
 
 Potential places to watch:
 
@@ -30,6 +32,12 @@ Potential places to watch:
 - We are deferring off-chain typed charge authorizations.
 - We are using `MockUSDC` as the local dev token.
 - We are optimizing for a clean interview story, not generalized production breadth.
+- 2026-03-25T22:24:38Z: keep the user-visible `PolicyRevoked` event name stable and rename the
+  conflicting custom error to `PolicyIsRevoked`; `app/src/lib/generated/abi.ts` remains a placeholder,
+  so no ABI sync action is needed yet in this M1.2 thread.
+- 2026-03-25T22:24:38Z: `deposit` credits `_vaultBalance` before `safeTransferFrom` and `withdraw`
+  debits before `safeTransfer`, so both funding-path events expose post-state balances while keeping
+  checks-effects-interactions ordering.
 
 ## Context and Orientation
 

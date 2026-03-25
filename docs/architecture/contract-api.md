@@ -35,11 +35,12 @@ Purpose: bounded owner-funded spending with beneficiary-specific policies.
 
 The UI and demo should be able to reconstruct the main story from events alone:
 
-- owner deposited
+- owner deposited with the post-state vault balance in `Deposited(owner, amount, newVaultBalance)`
 - policy created
 - beneficiary charged
 - owner revoked
-- owner withdrew
+- owner withdrew with the post-state vault balance in
+  `Withdrawn(owner, receiver, amount, newVaultBalance)`
 
 ### Custom errors
 
