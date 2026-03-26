@@ -17,6 +17,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T02:23:41Z M3.5 replace the placeholder timeline with direct PolicyVault log reads, deterministic merge-and-sort ordering, post-write refreshes, and a compact demo-readiness / last-action status surface.
 - [x] 2026-03-26T14:40:54Z M2.2 harden localhost scripts so stale `deployments/localhost.json` files fail early on fresh nodes by checking for bytecode at `mockUsdc` and `policyVault` before seed and demo continue.
 - [x] 2026-03-26T14:46:12Z M2.3 harden env docs and fallback parsing so generated localhost addresses remain the obvious source of truth, env fallback comments match the real precedence order, and invalid `NEXT_PUBLIC_CHAIN_ID` values fall back cleanly instead of leaking `NaN`.
+- [x] 2026-03-26T14:52:49Z M3.2 cleanup remove the stale funding-only container residue, confirm `VaultDashboard` is the only active runtime container path, and clear leftover plan references to the dead file.
 
 ## Surprises & Discoveries
 
@@ -58,8 +59,9 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
   `Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? ...)` parse, which meant an invalid or non-positive
   `NEXT_PUBLIC_CHAIN_ID` could silently turn into `NaN` even though the generated-localhost-first
   precedence was otherwise correct.
-- The required `pnpm web:build` check is currently blocked by an existing type mismatch in
-  `app/src/components/funding-slice.tsx`, not by the env-doc or chain-id hardening in this pass.
+- After the dashboard migration and timeline work, the old funding-only container file was still
+  sitting in the workspace even though runtime had already moved entirely to `VaultDashboard`, and
+  two stale plan references were still pointing at that dead file.
 
 ## Decision Log
 
@@ -116,6 +118,9 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - This M2.3 hardening pass keeps runtime address precedence and the generated/public app wiring
   shape unchanged. It only tightens the env comments to match the real generated-first flow and
   replaces the raw env chain-id parse with a safe fallback parser.
+- Repo hygiene cleanup should keep only one active dashboard container path. The stale funding-only
+  container file is deleted instead of being retained as dead workspace residue once
+  `VaultDashboard` owns the runtime path.
 
 ## Context and Orientation
 
@@ -253,6 +258,11 @@ This M2.3 hardening pass leaves `app/src/lib/generated/abi.ts`,
 making the env docs truthful about the generated-localhost-first flow.
 `app/src/lib/contract-addresses.ts` now parses `NEXT_PUBLIC_CHAIN_ID` defensively in the
 env-fallback branch and falls back to `generatedAddresses.localhost.chainId` when the env value is
-missing, invalid, `NaN`, or non-positive. `pnpm compile` and `pnpm abi:sync` succeeded, while the
-required `pnpm web:build` check remains blocked by an existing type mismatch in
-`app/src/components/funding-slice.tsx`.
+missing, invalid, `NaN`, or non-positive. `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`
+all succeeded once the stale funding-only residue was cleaned up.
+
+This M3.2 cleanup pass makes no runtime behavior change. `page.tsx` already mounted only
+`VaultDashboard`, `docs/architecture/frontend-data-flow.md` already documented the dashboard as the
+active owner, and the repo search now comes back clean once the dead file and stale plan
+references are removed. The exact next hardening target is keeping the dashboard docs and
+validation notes aligned as future UI polish lands.
