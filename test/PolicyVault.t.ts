@@ -6,8 +6,23 @@ import { getAddress, parseSignature } from 'viem';
 
 const USDC = 1_000_000n;
 const INITIAL_MINT = 100n * USDC;
+const UINT128_MAX = (1n << 128n) - 1n;
 
 type Fixture = Awaited<ReturnType<typeof deployFixture>>;
+
+describe('PolicyVault constructor', async () => {
+  it('reverts when deployed with the zero asset address', async () => {
+    const { viem, publicClient, owner, vault } = await deployFixture();
+
+    await viem.assertions.revertWithCustomError(
+      viem.deployContract('PolicyVault', [zeroAddress], {
+        client: { public: publicClient, wallet: owner },
+      }),
+      vault,
+      'ZeroAddress',
+    );
+  });
+});
 
 describe('PolicyVault M1.2 deposit and withdraw', async () => {
   it('reverts when deposit amount is zero', async () => {
@@ -262,6 +277,22 @@ describe('PolicyVault M1.4 policy lifecycle and state-machine proof', async () =
       vault,
       'ZeroAmount',
     );
+  });
+
+  it('reverts when createPolicy cap exceeds uint128 max and leaves the owner nonce unchanged', async () => {
+    const { networkHelpers, viem, owner, receiver, vault } = await deployFixture();
+    const oversizedCap = UINT128_MAX + 1n;
+    const expiresAt = (await latestTimestamp(networkHelpers)) + 3600n;
+    const nonceBefore = await vault.read.nextPolicyNonce([owner.account.address]);
+
+    await viem.assertions.revertWithCustomErrorWithArgs(
+      vault.write.createPolicy([receiver.account.address, oversizedCap, expiresAt]),
+      vault,
+      'SafeCastOverflowedUintDowncast',
+      [128, oversizedCap],
+    );
+
+    assert.equal(await vault.read.nextPolicyNonce([owner.account.address]), nonceBefore);
   });
 
   it('reverts when createPolicy expiry is now or already in the past', async () => {
@@ -701,17 +732,17 @@ describe('PolicyVault M2.1 depositWithPermit', async () => {
 
     await approveAndDeposit(classicFixture, amount);
 
-    assert.deepEqual(
-      await readFundingState(permitFixture),
-      await readFundingState(classicFixture),
-    );
+    assert.deepEqual(await readFundingState(permitFixture), await readFundingState(classicFixture));
   });
 
   it('reverts with ZeroAmount before any permit side effects when amount is zero', async () => {
     const { networkHelpers, viem, owner, token, publicClient, vault } = await deployFixture();
     const deadline = (await latestTimestamp(networkHelpers)) + 3600n;
     const nonceBefore = await token.read.nonces([owner.account.address]);
-    const permit = await signPermit({ owner, publicClient, token, vault }, { amount: 0n, deadline });
+    const permit = await signPermit(
+      { owner, publicClient, token, vault },
+      { amount: 0n, deadline },
+    );
 
     await viem.assertions.revertWithCustomError(
       vault.write.depositWithPermit([0n, deadline, permit.v, permit.r, permit.s]),
@@ -738,6 +769,30 @@ describe('PolicyVault M2.1 depositWithPermit', async () => {
       'ERC2612ExpiredSignature',
       [deadline],
     );
+  });
+
+  it('reverts when permit call data is tampered after signing and leaves no vault or token state drift', async () => {
+    const { networkHelpers, viem, owner, token, publicClient, vault } = await deployFixture();
+    const signedAmount = 6n * USDC;
+    const tamperedAmount = signedAmount + 1n;
+    const deadline = (await latestTimestamp(networkHelpers)) + 3600n;
+    const nonceBefore = await token.read.nonces([owner.account.address]);
+    const permit = await signPermit(
+      { owner, publicClient, token, vault },
+      { amount: signedAmount, deadline },
+    );
+
+    await viem.assertions.revertWithCustomError(
+      vault.write.depositWithPermit([tamperedAmount, deadline, permit.v, permit.r, permit.s]),
+      token,
+      'ERC2612InvalidSigner',
+    );
+
+    assert.equal(await token.read.nonces([owner.account.address]), nonceBefore);
+    assert.equal(await token.read.allowance([owner.account.address, vault.address]), 0n);
+    assert.equal(await vault.read.vaultBalanceOf([owner.account.address]), 0n);
+    assert.equal(await token.read.balanceOf([owner.account.address]), INITIAL_MINT);
+    assert.equal(await token.read.balanceOf([vault.address]), 0n);
   });
 
   it('reverts when reusing the same permit signature after a successful deposit', async () => {
@@ -834,14 +889,15 @@ async function waitForTransaction(publicClient: Fixture['publicClient'], hash: `
   await publicClient.waitForTransactionReceipt({ hash });
 }
 
-async function readFundingState(
-  fixture: Pick<Fixture, 'owner' | 'token' | 'vault'>,
-) {
+async function readFundingState(fixture: Pick<Fixture, 'owner' | 'token' | 'vault'>) {
   return {
     vaultBalance: await fixture.vault.read.vaultBalanceOf([fixture.owner.account.address]),
     ownerTokenBalance: await fixture.token.read.balanceOf([fixture.owner.account.address]),
     vaultTokenBalance: await fixture.token.read.balanceOf([fixture.vault.address]),
-    allowance: await fixture.token.read.allowance([fixture.owner.account.address, fixture.vault.address]),
+    allowance: await fixture.token.read.allowance([
+      fixture.owner.account.address,
+      fixture.vault.address,
+    ]),
   };
 }
 
@@ -900,10 +956,7 @@ async function latestTimestamp(networkHelpers: Fixture['networkHelpers']) {
   return BigInt(await networkHelpers.time.latest());
 }
 
-async function setNextBlockTimestamp(
-  networkHelpers: Fixture['networkHelpers'],
-  timestamp: bigint,
-) {
+async function setNextBlockTimestamp(networkHelpers: Fixture['networkHelpers'], timestamp: bigint) {
   await networkHelpers.time.setNextBlockTimestamp(Number(timestamp));
 }
 

@@ -13,6 +13,7 @@ The user-visible outcome is that an owner can fund a vault, create a beneficiary
 - [x] 2026-03-25T23:28:41Z M1.2 optional hardening pass: strengthen the missing-allowance deposit coverage with unchanged-balance assertions, prove a second wallet cannot withdraw another owner's funded balance, and keep the contract unchanged because the tests exposed no deposit/withdraw bug
 - [x] 2026-03-25T23:47:07Z M1.3 implement `createPolicy`, `revokePolicy`, and `charge`, add focused happy/failure tests for each path, and keep the public contract surface stable while documenting post-state `Charged` semantics and the "cap is not pre-funded" rule
 - [x] 2026-03-25T23:55:44Z M1.4 expand contract coverage for deterministic policy ids, create/revoke/charge failure modes, exact expiry semantics, post-charge withdrawability, and non-drifting revert paths; keep the contract unchanged because the tighter state-machine tests exposed no bug
+- [x] 2026-03-26T01:12:06Z M1.4 repo-hygiene and edge-hardening pass: remove the stale scaffold test file, prove the constructor rejects a zero asset, assert the imported OpenZeppelin `SafeCastOverflowedUintDowncast(128, cap)` revert for oversized policy caps, and add a tampered permit failure path with unchanged nonce, allowance, vault balance, and token balances; keep the contract unchanged because the new proofs exposed no bug
 
 ## Surprises & Discoveries
 
@@ -33,6 +34,15 @@ expiry inputs without mixed-type errors in TypeScript.
 `networkHelpers.time.setNextBlockTimestamp(...)`, which makes the M1.4 expiry proof deterministic:
 the suite can show `charge` still succeeds at `expiresAt` and then reverts exactly one second later
 with the expected `PolicyExpired(policyId, expiresAt, nowTs)` args.
+
+2026-03-26T01:12:06Z: the compiled `PolicyVault` artifact already includes the imported
+OpenZeppelin `SafeCastOverflowedUintDowncast` custom error in its ABI, so the oversized-cap proof
+can assert the exact library revert and its `(128, oversizedCap)` args without any contract or ABI
+plumbing changes.
+
+2026-03-26T01:12:06Z: the Hardhat viem deploy assertion can reuse a deployed `PolicyVault`
+instance's ABI to decode a reverting constructor call, which made the zero-asset deployment test
+precise while still keeping this pass test-only.
 
 Potential places to watch:
 
@@ -65,6 +75,11 @@ Potential places to watch:
 - 2026-03-25T23:55:44Z: keep M1.4 test-only. The expanded policy lifecycle matrix proves nonce
   stability, missing-policy reverts, exact-expiry behavior, post-charge withdrawability, and
   non-drifting revert paths without requiring any contract or ABI changes.
+- 2026-03-26T01:12:06Z: keep this hygiene pass contract-unchanged. The constructor already rejects
+  `address(0)`, `createPolicy` already relies on `SafeCast.toUint128` to block silent cap
+  truncation, and the permit path already reverts cleanly on mismatched signed payloads, so the
+  right move is to strengthen proofs and remove the stale scaffold file rather than reopen the
+  contract design.
 
 ## Context and Orientation
 
