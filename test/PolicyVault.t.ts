@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { network } from 'hardhat';
-import { getAddress } from 'viem';
+import { getAddress, parseSignature } from 'viem';
 
 const USDC = 1_000_000n;
 const INITIAL_MINT = 100n * USDC;
@@ -651,6 +651,120 @@ describe('PolicyVault M1.4 policy lifecycle and state-machine proof', async () =
   });
 });
 
+describe('PolicyVault M2.1 depositWithPermit', async () => {
+  it('allows permit plus deposit without prior approve, updates balances, and emits Deposited', async () => {
+    const { networkHelpers, viem, publicClient, owner, token, vault } = await deployFixture();
+    const amount = 13n * USDC;
+    const deadline = (await latestTimestamp(networkHelpers)) + 3600n;
+    const permit = await signPermit({ owner, publicClient, token, vault }, { amount, deadline });
+
+    assert.equal(await token.read.allowance([owner.account.address, vault.address]), 0n);
+
+    await viem.assertions.emitWithArgs(
+      vault.write.depositWithPermit([amount, deadline, permit.v, permit.r, permit.s]),
+      vault,
+      'Deposited',
+      [getAddress(owner.account.address), amount, amount],
+    );
+
+    assert.equal(await vault.read.vaultBalanceOf([owner.account.address]), amount);
+    assert.equal(await token.read.balanceOf([owner.account.address]), INITIAL_MINT - amount);
+    assert.equal(await token.read.balanceOf([vault.address]), amount);
+    assert.equal(await token.read.allowance([owner.account.address, vault.address]), 0n);
+  });
+
+  it('leaves the same funded state as the classic approve plus deposit path', async () => {
+    const permitFixture = await deployFixture();
+    const classicFixture = await deployFixture();
+    const amount = 9n * USDC;
+    const deadline = (await latestTimestamp(permitFixture.networkHelpers)) + 3600n;
+    const permit = await signPermit(
+      {
+        owner: permitFixture.owner,
+        publicClient: permitFixture.publicClient,
+        token: permitFixture.token,
+        vault: permitFixture.vault,
+      },
+      { amount, deadline },
+    );
+
+    await waitForTransaction(
+      permitFixture.publicClient,
+      await permitFixture.vault.write.depositWithPermit([
+        amount,
+        deadline,
+        permit.v,
+        permit.r,
+        permit.s,
+      ]),
+    );
+
+    await approveAndDeposit(classicFixture, amount);
+
+    assert.deepEqual(
+      await readFundingState(permitFixture),
+      await readFundingState(classicFixture),
+    );
+  });
+
+  it('reverts with ZeroAmount before any permit side effects when amount is zero', async () => {
+    const { networkHelpers, viem, owner, token, publicClient, vault } = await deployFixture();
+    const deadline = (await latestTimestamp(networkHelpers)) + 3600n;
+    const nonceBefore = await token.read.nonces([owner.account.address]);
+    const permit = await signPermit({ owner, publicClient, token, vault }, { amount: 0n, deadline });
+
+    await viem.assertions.revertWithCustomError(
+      vault.write.depositWithPermit([0n, deadline, permit.v, permit.r, permit.s]),
+      vault,
+      'ZeroAmount',
+    );
+
+    assert.equal(await token.read.nonces([owner.account.address]), nonceBefore);
+    assert.equal(await token.read.allowance([owner.account.address, vault.address]), 0n);
+    assert.equal(await vault.read.vaultBalanceOf([owner.account.address]), 0n);
+    assert.equal(await token.read.balanceOf([owner.account.address]), INITIAL_MINT);
+    assert.equal(await token.read.balanceOf([vault.address]), 0n);
+  });
+
+  it('reverts when the permit deadline has already expired', async () => {
+    const { networkHelpers, viem, owner, token, publicClient, vault } = await deployFixture();
+    const amount = 5n * USDC;
+    const deadline = (await latestTimestamp(networkHelpers)) - 1n;
+    const permit = await signPermit({ owner, publicClient, token, vault }, { amount, deadline });
+
+    await viem.assertions.revertWithCustomErrorWithArgs(
+      vault.write.depositWithPermit([amount, deadline, permit.v, permit.r, permit.s]),
+      token,
+      'ERC2612ExpiredSignature',
+      [deadline],
+    );
+  });
+
+  it('reverts when reusing the same permit signature after a successful deposit', async () => {
+    const { networkHelpers, viem, owner, token, publicClient, vault } = await deployFixture();
+    const amount = 6n * USDC;
+    const deadline = (await latestTimestamp(networkHelpers)) + 3600n;
+    const permit = await signPermit({ owner, publicClient, token, vault }, { amount, deadline });
+
+    await waitForTransaction(
+      publicClient,
+      await vault.write.depositWithPermit([amount, deadline, permit.v, permit.r, permit.s]),
+    );
+
+    await viem.assertions.revertWithCustomError(
+      vault.write.depositWithPermit([amount, deadline, permit.v, permit.r, permit.s]),
+      token,
+      'ERC2612InvalidSigner',
+    );
+
+    assert.equal(await token.read.nonces([owner.account.address]), 1n);
+    assert.equal(await token.read.allowance([owner.account.address, vault.address]), 0n);
+    assert.equal(await vault.read.vaultBalanceOf([owner.account.address]), amount);
+    assert.equal(await token.read.balanceOf([owner.account.address]), INITIAL_MINT - amount);
+    assert.equal(await token.read.balanceOf([vault.address]), amount);
+  });
+});
+
 async function deployFixture() {
   const { networkHelpers, viem } = await network.connect();
   const publicClient = await viem.getPublicClient();
@@ -718,6 +832,68 @@ async function approve(
 
 async function waitForTransaction(publicClient: Fixture['publicClient'], hash: `0x${string}`) {
   await publicClient.waitForTransactionReceipt({ hash });
+}
+
+async function readFundingState(
+  fixture: Pick<Fixture, 'owner' | 'token' | 'vault'>,
+) {
+  return {
+    vaultBalance: await fixture.vault.read.vaultBalanceOf([fixture.owner.account.address]),
+    ownerTokenBalance: await fixture.token.read.balanceOf([fixture.owner.account.address]),
+    vaultTokenBalance: await fixture.token.read.balanceOf([fixture.vault.address]),
+    allowance: await fixture.token.read.allowance([fixture.owner.account.address, fixture.vault.address]),
+  };
+}
+
+async function signPermit(
+  fixture: Pick<Fixture, 'owner' | 'publicClient' | 'token' | 'vault'>,
+  {
+    amount,
+    deadline,
+  }: {
+    amount: bigint;
+    deadline: bigint;
+  },
+) {
+  const [chainId, name, nonce] = await Promise.all([
+    fixture.publicClient.getChainId(),
+    fixture.token.read.name(),
+    fixture.token.read.nonces([fixture.owner.account.address]),
+  ]);
+
+  const signature = await fixture.owner.signTypedData({
+    account: fixture.owner.account,
+    domain: {
+      name,
+      version: '1',
+      chainId,
+      verifyingContract: fixture.token.address,
+    },
+    types: {
+      Permit: [
+        { name: 'owner', type: 'address' },
+        { name: 'spender', type: 'address' },
+        { name: 'value', type: 'uint256' },
+        { name: 'nonce', type: 'uint256' },
+        { name: 'deadline', type: 'uint256' },
+      ],
+    },
+    primaryType: 'Permit',
+    message: {
+      owner: fixture.owner.account.address,
+      spender: fixture.vault.address,
+      value: amount,
+      nonce,
+      deadline,
+    },
+  });
+  const parsedSignature = parseSignature(signature);
+
+  return {
+    v: Number(parsedSignature.v),
+    r: parsedSignature.r,
+    s: parsedSignature.s,
+  };
 }
 
 async function latestTimestamp(networkHelpers: Fixture['networkHelpers']) {

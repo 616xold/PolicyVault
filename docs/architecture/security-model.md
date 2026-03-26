@@ -37,6 +37,11 @@ moment of execution.
 `withdraw` and `charge` both update contract state before calling `safeTransfer`, so the stored
 vault balance and policy spend stay ahead of the external token transfer boundary.
 
+For `depositWithPermit`, the vault validates zero amount before touching the token's permit path so
+a reverting call cannot consume a permit nonce or leave an allowance side effect. Once `permit`
+succeeds, the vault reuses the same deposit logic and `Deposited` event semantics as the classic
+approve-plus-deposit path.
+
 ## Things to say in the interview
 
 - broad wallet approvals can be dangerous because the spender can often move funds directly from the wallet within the allowance

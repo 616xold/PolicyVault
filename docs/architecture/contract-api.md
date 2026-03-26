@@ -23,6 +23,10 @@ Purpose: bounded owner-funded spending with beneficiary-specific policies.
 - `revokePolicy`
 - `charge`
 
+`depositWithPermit` is intentionally a thin wrapper. It validates `amount`, calls ERC-2612
+`permit` on the configured `asset`, and then reuses the same funding path as `deposit`, so the
+resulting vault state and `Deposited` event semantics stay identical to the classic approve flow.
+
 `createPolicy` records an authorization ceiling, not a funding guarantee. The owner's current vault
 balance is enforced later by `charge`, not at policy creation time.
 

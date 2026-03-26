@@ -8,7 +8,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 
 ## Progress
 
-- [ ] M2.1 implement permit deposit path
+- [x] 2026-03-26T00:15:16Z M2.1 implement permit deposit path with a shared internal deposit helper, focused permit tests, and no public ABI change.
 - [ ] M2.2 wire deploy / seed / demo scripts
 - [ ] M2.3 sync ABI into the app
 - [ ] M2.4 build UI state panels
@@ -16,13 +16,21 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 
 ## Surprises & Discoveries
 
-None yet.
+- The live ERC-2612 domain name for the local token is `Mock USDC`, so tests should derive the
+  typed-data domain from the deployed token instead of guessing from the Solidity contract name.
+- The OpenZeppelin permit failure paths are available for focused test assertions once the contract
+  is recompiled with the implemented permit path.
 
 ## Decision Log
 
 - The UI is explanatory before it is beautiful.
 - The event timeline is part of the demo surface, not a nice-to-have.
 - We will not add backend services or indexing in v1.
+- `depositWithPermit` preserves the classic `deposit` story by validating zero amount at the vault
+  layer, calling `IERC20Permit`, and then reusing a small internal `_depositFrom` helper for the
+  shared state update, token transfer, and `Deposited` event emission.
+- The public ABI surface stays unchanged for M2.1, so there is no ABI sync or app wiring work in
+  this submilestone.
 
 ## Context and Orientation
 
@@ -93,4 +101,7 @@ Any contract interface changes must be reflected in the UI wiring docs and in `s
 
 ## Outcomes & Retrospective
 
-Not completed yet.
+M2.1 is complete. `depositWithPermit` now works against `MockUSDC` without a prior `approve`
+transaction, emits the same `Deposited` event shape as the classic deposit path, and is covered by
+focused happy-path and failure-path tests for zero amount, expiry, and signature replay. M2.2
+remains next.

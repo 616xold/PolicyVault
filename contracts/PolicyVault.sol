@@ -27,13 +27,7 @@ contract PolicyVault is IPolicyVault, ReentrancyGuard {
 
     function deposit(uint256 amount) external nonReentrant {
         _requirePositiveAmount(amount);
-
-        uint256 newVaultBalance = _vaultBalance[msg.sender] + amount;
-        _vaultBalance[msg.sender] = newVaultBalance;
-
-        asset.safeTransferFrom(msg.sender, address(this), amount);
-
-        emit Deposited(msg.sender, amount, newVaultBalance);
+        _depositFrom(msg.sender, amount);
     }
 
     function depositWithPermit(
@@ -43,17 +37,10 @@ contract PolicyVault is IPolicyVault, ReentrancyGuard {
         bytes32 r,
         bytes32 s
     ) external nonReentrant {
-        /// TODO(EP-0002/M2.1): implement permit + deposit path.
-        /// Expected shape:
-        /// 1. validate amount > 0
-        /// 2. call IERC20Permit(address(asset)).permit(...)
-        /// 3. reuse the same deposit logic
-        amount;
-        deadline;
-        v;
-        r;
-        s;
-        revert NotImplemented();
+        _requirePositiveAmount(amount);
+
+        IERC20Permit(address(asset)).permit(msg.sender, address(this), amount, deadline, v, r, s);
+        _depositFrom(msg.sender, amount);
     }
 
     function withdraw(uint256 amount, address receiver) external nonReentrant {
@@ -195,5 +182,15 @@ contract PolicyVault is IPolicyVault, ReentrancyGuard {
 
     function _requireNonZeroAddress(address value) internal pure {
         if (value == address(0)) revert ZeroAddress();
+    }
+
+    /// @dev Shared post-validation funding path so approve and permit deposits stay state/event-identical.
+    function _depositFrom(address owner, uint256 amount) internal {
+        uint256 newVaultBalance = _vaultBalance[owner] + amount;
+        _vaultBalance[owner] = newVaultBalance;
+
+        asset.safeTransferFrom(owner, address(this), amount);
+
+        emit Deposited(owner, amount, newVaultBalance);
     }
 }
