@@ -1,4 +1,8 @@
-import { contractAddresses } from './contract-addresses';
+import {
+  contractAddresses,
+  contractAddressSource,
+  hasConfiguredAddresses,
+} from './contract-addresses';
 import { MockUSDCAbi, PolicyVaultAbi } from './generated/abi';
 
 export const mockUsdcContract = {
@@ -9,4 +13,10 @@ export const mockUsdcContract = {
 export const policyVaultContract = {
   address: contractAddresses.policyVault,
   abi: PolicyVaultAbi,
+} as const;
+
+export const contractConfig = {
+  addressSource: contractAddressSource,
+  chainId: contractAddresses.chainId,
+  hasConfiguredAddresses,
 } as const;

@@ -24,12 +24,23 @@ With the local node running in a second terminal:
 
 ```bash
 pnpm deploy:local
+pnpm abi:sync
 pnpm seed:local
 pnpm demo:local
 ```
 
 `pnpm deploy:local` writes `deployments/localhost.json` with the localhost `chainId`,
 network name, deployer, `MockUSDC` address, and `PolicyVault` address.
+
+`pnpm abi:sync` reads the current contract artifacts and `deployments/localhost.json`, then writes:
+
+- `app/src/lib/generated/abi.ts`
+- `app/src/lib/generated/addresses.ts`
+
+If `deployments/localhost.json` is missing, `pnpm abi:sync` still generates a safe placeholder
+`app/src/lib/generated/addresses.ts` with zero addresses and an explicit warning comment. The app
+prefers generated localhost addresses when they exist and only falls back to `NEXT_PUBLIC_*`
+address env vars when that deployment artifact is missing.
 
 `pnpm seed:local` mints readable demo balances to the first three localhost wallets:
 
@@ -47,14 +58,11 @@ network name, deployer, `MockUSDC` address, and `PolicyVault` address.
 - revoke
 - withdraw unused funds
 
-ABI sync and UI wiring remain separate from this milestone:
+The local UI now reads its ABI and localhost address source of truth from the generated files:
 
 ```bash
-pnpm abi:sync
 pnpm web:dev
 ```
-
-For M2.2, `deployments/localhost.json` is the source of truth for local addresses.
 
 ## Run the UI
 

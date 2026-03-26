@@ -10,7 +10,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 
 - [x] 2026-03-26T00:15:16Z M2.1 implement permit deposit path with a shared internal deposit helper, focused permit tests, and no public ABI change.
 - [x] 2026-03-26T01:23:41Z M2.2 wire localhost deploy / seed / demo scripts with a deterministic deployment artifact, simulate-before-write demo flow, and live validation on a local node.
-- [ ] M2.3 sync ABI into the app
+- [x] 2026-03-26T01:33:26Z M2.3 make ABI and localhost address sync deterministic for the app by generating `app/src/lib/generated/abi.ts` from artifacts, generating `app/src/lib/generated/addresses.ts` from `deployments/localhost.json` with a placeholder fallback, and resolving app contract wiring from those generated files first.
 - [ ] M2.4 build UI state panels
 - [ ] M2.5 add event timeline and final runbook
 
@@ -26,6 +26,11 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - The policy cap is not reserved escrow; it is enforced against the owner's current vault balance
   at charge time, so the demo and runbook need to narrate withdraw as recovering remaining vault
   funds after revoke.
+- Using the `IPolicyVault` interface artifact for app ABI sync keeps the generated vault ABI tied to
+  the public surface and much easier to inspect than the full implementation artifact.
+- An optional `pnpm --filter policyvault-web build` check is still blocked by a pre-existing
+  Next.js TypeScript import-extension error in `app/src/app/layout.tsx`, so M2.3 validation should
+  rely on `pnpm compile` and `pnpm abi:sync` until that separate app build issue is addressed.
 
 ## Decision Log
 
@@ -44,6 +49,15 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - The demo script simulates every state-changing call before sending it and uses an intentional
   over-cap simulation as the failing path so the revert is visible without broadcasting a known-bad
   transaction.
+- M2.3 keeps `deployments/localhost.json` as the single source of truth for local addresses, and
+  `pnpm abi:sync` now materializes those addresses into `app/src/lib/generated/addresses.ts` so the
+  app no longer depends on manual address copy-paste.
+- Generated localhost addresses win over env configuration when the deployment artifact exists; the
+  `NEXT_PUBLIC_POLICYVAULT_ADDRESS` and `NEXT_PUBLIC_MOCKUSDC_ADDRESS` env vars remain only as a
+  last-resort fallback when `deployments/localhost.json` is missing.
+- `PolicyVaultAbi` is now generated from the `IPolicyVault` interface artifact, and `MockUSDCAbi`
+  is filtered down to the app-used ERC-20 and permit surface so the generated app imports stay
+  typed, reviewable, and free of inherited implementation noise.
 
 ## Context and Orientation
 
@@ -125,3 +139,12 @@ to the first three localhost wallets. `demo.ts` reads the same artifact and runs
 approve-and-deposit, permit deposit, create policy, charge, over-cap revert, revoke, and withdraw
 flow using simulation before every contract write. The validated next submilestone is M2.3 ABI
 sync into the app.
+
+M2.3 is now complete. `sync-abi.ts` generates `app/src/lib/generated/abi.ts` from the current
+artifact set and `app/src/lib/generated/addresses.ts` from `deployments/localhost.json`, while
+also emitting a safe placeholder addresses file when the localhost deployment artifact is missing.
+`app/src/lib/contracts.ts`, `app/src/lib/contract-addresses.ts`, and `app/src/lib/config.ts` now
+consume the generated ABI and address files directly, preferring generated localhost data over env
+fallbacks so the app and scripts do not drift. `pnpm compile` and `pnpm abi:sync` both completed
+successfully against the current repo state. The exact next submilestone is M2.4 build UI state
+panels.
