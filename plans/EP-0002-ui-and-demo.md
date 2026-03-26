@@ -19,117 +19,57 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T14:46:12Z M2.3 harden env docs and fallback parsing so generated localhost addresses remain the obvious source of truth, env fallback comments match the real precedence order, and invalid `NEXT_PUBLIC_CHAIN_ID` values fall back cleanly instead of leaking `NaN`.
 - [x] 2026-03-26T14:52:49Z M3.2 cleanup remove the stale funding-only container residue, confirm `VaultDashboard` is the only active runtime container path, and clear leftover plan references to the dead file.
 - [x] 2026-03-26T15:03:35Z M3 hardening add a lightweight live bytecode probe so the dashboard distinguishes missing addresses, RPC outage, configured-but-empty contract addresses, and ready; sync the local UI docs; and keep `app/next-env.d.ts` as tracked app scaffold.
+- [x] 2026-03-26T23:07:57Z M4.1 rewrite the README for reviewer-facing accuracy, sync the local-dev and demo docs to the real current UI and script flow, make the tracked-file policy explicit, and keep runtime code unchanged.
 
 ## Surprises & Discoveries
 
-- The live ERC-2612 domain name for the local token is `Mock USDC`, so tests should derive the
-  typed-data domain from the deployed token instead of guessing from the Solidity contract name.
-- The OpenZeppelin permit failure paths are available for focused test assertions once the contract
-  is recompiled with the implemented permit path.
-- Hardhat warns that Node.js `25.6.1` is unsupported, but `pnpm compile`, `pnpm test`,
-  `pnpm deploy:local`, `pnpm seed:local`, and `pnpm demo:local` still completed successfully in
-  live localhost validation.
-- The policy cap is not reserved escrow; it is enforced against the owner's current vault balance
-  at charge time, so the demo and runbook need to narrate withdraw as recovering remaining vault
-  funds after revoke.
-- Matching `chainId` and network name are not enough to trust a localhost deployment artifact,
-  because a fresh Hardhat node still reports `31337` while returning no bytecode at stale saved
-  addresses.
-- Using the `IPolicyVault` interface artifact for app ABI sync keeps the generated vault ABI tied to
-  the public surface and much easier to inspect than the full implementation artifact.
-- Next.js production type checking under NodeNext required explicit `.js` relative imports across
-  `app/src`, and the full `pnpm web:build` pass also surfaced two small strict-typing gaps in
-  `app/src/lib/contract-addresses.ts` and `app/src/lib/format.ts` before the funding slice could be
-  considered truly build-valid.
-- On a fresh localhost node under Node.js `25.6.1`, `pnpm deploy:local` hit a Hardhat
-  `compile-cache.json.tmp` rename failure, so live happy-path UI validation still depends on a
-  supported Node 22 LTS setup even though the funding page now renders and degrades cleanly.
-- `simulateContract(createPolicy)` returns the deterministic policy id, so the UI can show the
-  exact created id and immediately reload that policy without waiting for event indexing.
-- Keeping funding and policy actions inside one small dashboard container was simpler than splitting
-  them into disconnected slices, because charge and withdraw both need to refresh the same visible
-  wallet and vault reads after a successful write.
-- `pnpm web:build` generated `app/next-env.d.ts` in the app workspace, so that file should be
-  removed after validation to keep the repo free of generated Next.js artifacts.
-- viem `getLogs` plus a generic event item cast made the generated ABI log args awkward to type in
-  Next.js strict checking, while `getContractEvents` preserved the same direct-ABI read path and
-  kept the event args obvious.
-- For the demo, a small polling loop plus an explicit refresh button is easier to explain than a
-  websocket stream and still keeps the timeline current after local writes.
-- The env-fallback branch in `app/src/lib/contract-addresses.ts` was still using a raw
-  `Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? ...)` parse, which meant an invalid or non-positive
-  `NEXT_PUBLIC_CHAIN_ID` could silently turn into `NaN` even though the generated-localhost-first
-  precedence was otherwise correct.
-- After the dashboard migration and timeline work, the old funding-only container file was still
-  sitting in the workspace even though runtime had already moved entirely to `VaultDashboard`, and
-  two stale plan references were still pointing at that dead file.
-- On this Next.js version, `pnpm web:build` restores the `import "./.next/types/routes.d.ts";`
-  line in `app/next-env.d.ts`, so the stable repo policy is to keep that file tracked and stop
-  deleting it after builds instead of fighting the generator.
+- The live ERC-2612 domain name for the local token is `Mock USDC`, so tests should derive the typed-data domain from the deployed token instead of guessing from the Solidity contract name.
+- The OpenZeppelin permit failure paths are available for focused test assertions once the contract is recompiled with the implemented permit path.
+- Hardhat warns that Node.js `25.6.1` is unsupported, but `pnpm compile`, `pnpm test`, `pnpm deploy:local`, `pnpm seed:local`, and `pnpm demo:local` still completed successfully in live localhost validation.
+- The policy cap is not reserved escrow; it is enforced against the owner's current vault balance at charge time, so the demo and runbook need to narrate withdraw as recovering remaining vault funds after revoke.
+- Matching `chainId` and network name are not enough to trust a localhost deployment artifact, because a fresh Hardhat node still reports `31337` while returning no bytecode at stale saved addresses.
+- Using the `IPolicyVault` interface artifact for app ABI sync keeps the generated vault ABI tied to the public surface and much easier to inspect than the full implementation artifact.
+- Next.js production type checking under NodeNext required explicit `.js` relative imports across `app/src`, and the full `pnpm web:build` pass also surfaced two small strict-typing gaps in `app/src/lib/contract-addresses.ts` and `app/src/lib/format.ts` before the funding slice could be considered truly build-valid.
+- On a fresh localhost node under Node.js `25.6.1`, `pnpm deploy:local` hit a Hardhat `compile-cache.json.tmp` rename failure, so live happy-path UI validation still depends on a supported Node 22 LTS setup even though the funding page now renders and degrades cleanly.
+- `simulateContract(createPolicy)` returns the deterministic policy id, so the UI can show the exact created id and immediately reload that policy without waiting for event indexing.
+- Keeping funding and policy actions inside one small dashboard container was simpler than splitting them into disconnected slices, because charge and withdraw both need to refresh the same visible wallet and vault reads after a successful write.
+- `pnpm web:build` regenerates `app/next-env.d.ts`, which initially made it look disposable, but later validation confirmed the stable repo policy should keep that file tracked in its build-stable form instead of deleting it after each build.
+- viem `getLogs` plus a generic event item cast made the generated ABI log args awkward to type in Next.js strict checking, while `getContractEvents` preserved the same direct-ABI read path and kept the event args obvious.
+- For the demo, a small polling loop plus an explicit refresh button is easier to explain than a websocket stream and still keeps the timeline current after local writes.
+- The env-fallback branch in `app/src/lib/contract-addresses.ts` was still using a raw `Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? ...)` parse, which meant an invalid or non-positive `NEXT_PUBLIC_CHAIN_ID` could silently turn into `NaN` even though the generated-localhost-first precedence was otherwise correct.
+- After the dashboard migration and timeline work, the old funding-only container file was still sitting in the workspace even though runtime had already moved entirely to `VaultDashboard`, and two stale plan references were still pointing at that dead file.
+- On this Next.js version, `pnpm web:build` restores the `import "./.next/types/routes.d.ts";` line in `app/next-env.d.ts`, so the stable repo policy is to keep that file tracked and stop deleting it after builds instead of fighting the generator.
+- M4.1 surfaced mostly repo-hygiene drift rather than product drift: `app/next-env.d.ts` had slipped to the dev-only import, `deployments/localhost.json` had been deleted locally despite being the tracked source of truth, and `.nvmrc` plus `pnpm-lock.yaml` existed without being tracked yet.
 
 ## Decision Log
 
 - The UI is explanatory before it is beautiful.
 - The event timeline is part of the demo surface, not a nice-to-have.
 - We will not add backend services or indexing in v1.
-- `depositWithPermit` preserves the classic `deposit` story by validating zero amount at the vault
-  layer, calling `IERC20Permit`, and then reusing a small internal `_depositFrom` helper for the
-  shared state update, token transfer, and `Deposited` event emission.
-- The public ABI surface stays unchanged for M2.1, so there is no ABI sync or app wiring work in
-  this submilestone.
-- M2.2 uses a single human-inspectable `deployments/localhost.json` artifact as the source of
-  truth for local addresses, and explicitly defers ABI sync into the app to M2.3.
-- The seed script tops up the first three localhost wallets to readable demo balances instead of
-  adding reset or burn mechanics to `MockUSDC`.
-- The demo script simulates every state-changing call before sending it and uses an intentional
-  over-cap simulation as the failing path so the revert is visible without broadcasting a known-bad
-  transaction.
-- The localhost deployment artifact shape stays unchanged; the hardening stays in one small helper
-  that verifies bytecode exists at `mockUsdc` and `policyVault` before seed or demo use the saved
-  addresses.
-- M2.3 keeps `deployments/localhost.json` as the single source of truth for local addresses, and
-  `pnpm abi:sync` now materializes those addresses into `app/src/lib/generated/addresses.ts` so the
-  app no longer depends on manual address copy-paste.
-- Generated localhost addresses win over env configuration when the deployment artifact exists; the
-  `NEXT_PUBLIC_POLICYVAULT_ADDRESS` and `NEXT_PUBLIC_MOCKUSDC_ADDRESS` env vars remain only as a
-  last-resort fallback when `deployments/localhost.json` is missing.
-- `PolicyVaultAbi` is now generated from the `IPolicyVault` interface artifact, and `MockUSDCAbi`
-  is filtered down to the app-used ERC-20 and permit surface so the generated app imports stay
-  typed, reviewable, and free of inherited implementation noise.
-- M2.4 intentionally renders only the funding slice on the main page. Policy panels and the event
-  timeline stay hidden until their own submilestones are ready.
-- The funding UI uses one small client container to own the wagmi and viem interaction path, while
-  `WalletState` and `DepositPanel` stay presentational and easy to explain.
-- The approve flow reads live allowance before deciding whether approval is needed, and both funding
-  paths simulate their contract writes immediately before sending them.
-- The permit UI derives the live token name and nonce from the token contract, while keeping the
-  OpenZeppelin permit version `1` as an explicit app-side assumption.
-- M3.3 and M3.4 intentionally extend the same dashboard container instead of adding a second wallet
-  interaction path, so funding, vault balance, and policy refreshes stay in one obvious place.
-- Policy lookup stays manual and policy-id-first. We are intentionally not adding a policy list,
-  timeline, or indexer before M3.5.
-- The UI keeps charge, revoke, and withdraw buttons visible even for the wrong actor, and relies on
-  simulation plus explicit copy to explain owner-only versus beneficiary-only behavior.
-- M3.5 reads the five user-visible PolicyVault events directly from the public client, merges them
-  in one helper under `app/src/lib`, and keeps `EventTimeline` presentation-only so contract log
-  logic does not leak into UI markup.
-- Timeline freshness reuses the existing post-write dashboard refresh seam and adds a light polling
-  fallback plus a manual refresh button, which keeps the demo legible without adding an indexer or
-  websocket dependency.
-- The timeline now carries a compact `Demo ready` / `Missing local deploy` status plus the latest
-  write outcome so the interview flow can explain setup problems or recent success without bouncing
-  between cards.
-- This M2.3 hardening pass keeps runtime address precedence and the generated/public app wiring
-  shape unchanged. It only tightens the env comments to match the real generated-first flow and
-  replaces the raw env chain-id parse with a safe fallback parser.
-- Repo hygiene cleanup should keep only one active dashboard container path. The stale funding-only
-  container file is deleted instead of being retained as dead workspace residue once
-  `VaultDashboard` owns the runtime path.
-- This dashboard hardening pass keeps the write flows and panel ownership unchanged. It adds one
-  small `getCode`-based readiness probe ahead of app reads so `Demo ready` only appears when both
-  configured addresses actually have deployed bytecode on the current node.
-- `app/next-env.d.ts` is now treated as intentional tracked app scaffold. We no longer remove it
-  after builds, and repo hygiene should focus on real generated directories like `.next` instead.
+- `depositWithPermit` preserves the classic `deposit` story by validating zero amount at the vault layer, calling `IERC20Permit`, and then reusing a small internal `_depositFrom` helper for the shared state update, token transfer, and `Deposited` event emission.
+- The public ABI surface stays unchanged for M2.1, so there is no ABI sync or app wiring work in this submilestone.
+- M2.2 uses a single human-inspectable `deployments/localhost.json` artifact as the source of truth for local addresses, and explicitly defers ABI sync into the app to M2.3.
+- The seed script tops up the first three localhost wallets to readable demo balances instead of adding reset or burn mechanics to `MockUSDC`.
+- The demo script simulates every state-changing call before sending it and uses an intentional over-cap simulation as the failing path so the revert is visible without broadcasting a known-bad transaction.
+- The localhost deployment artifact shape stays unchanged; the hardening stays in one small helper that verifies bytecode exists at `mockUsdc` and `policyVault` before seed or demo use the saved addresses.
+- M2.3 keeps `deployments/localhost.json` as the single source of truth for local addresses, and `pnpm abi:sync` now materializes those addresses into `app/src/lib/generated/addresses.ts` so the app no longer depends on manual address copy-paste.
+- Generated localhost addresses win over env configuration when the deployment artifact exists; the `NEXT_PUBLIC_POLICYVAULT_ADDRESS` and `NEXT_PUBLIC_MOCKUSDC_ADDRESS` env vars remain only as a last-resort fallback when `deployments/localhost.json` is missing.
+- `PolicyVaultAbi` is now generated from the `IPolicyVault` interface artifact, and `MockUSDCAbi` is filtered down to the app-used ERC-20 and permit surface so the generated app imports stay typed, reviewable, and free of inherited implementation noise.
+- M2.4 intentionally renders only the funding slice on the main page. Policy panels and the event timeline stay hidden until their own submilestones are ready.
+- The funding UI uses one small client container to own the wagmi and viem interaction path, while `WalletState` and `DepositPanel` stay presentational and easy to explain.
+- The approve flow reads live allowance before deciding whether approval is needed, and both funding paths simulate their contract writes immediately before sending them.
+- The permit UI derives the live token name and nonce from the token contract, while keeping the OpenZeppelin permit version `1` as an explicit app-side assumption.
+- M3.3 and M3.4 intentionally extend the same dashboard container instead of adding a second wallet interaction path, so funding, vault balance, and policy refreshes stay in one obvious place.
+- Policy lookup stays manual and policy-id-first. We are intentionally not adding a policy list, timeline, or indexer before M3.5.
+- The UI keeps charge, revoke, and withdraw buttons visible even for the wrong actor, and relies on simulation plus explicit copy to explain owner-only versus beneficiary-only behavior.
+- M3.5 reads the five user-visible PolicyVault events directly from the public client, merges them in one helper under `app/src/lib`, and keeps `EventTimeline` presentation-only so contract log logic does not leak into UI markup.
+- Timeline freshness reuses the existing post-write dashboard refresh seam and adds a light polling fallback plus a manual refresh button, which keeps the demo legible without adding an indexer or websocket dependency.
+- The timeline now carries a compact `Demo ready` / `Missing local deploy` status plus the latest write outcome so the interview flow can explain setup problems or recent success without bouncing between cards.
+- This M2.3 hardening pass keeps runtime address precedence and the generated/public app wiring shape unchanged. It only tightens the env comments to match the real generated-first flow and replaces the raw env chain-id parse with a safe fallback parser.
+- Repo hygiene cleanup should keep only one active dashboard container path. The stale funding-only container file is deleted instead of being retained as dead workspace residue once `VaultDashboard` owns the runtime path.
+- This dashboard hardening pass keeps the write flows and panel ownership unchanged. It adds one small `getCode`-based readiness probe ahead of app reads so `Demo ready` only appears when both configured addresses actually have deployed bytecode on the current node.
+- `app/next-env.d.ts` is now treated as intentional tracked app scaffold. We no longer remove it after builds, and repo hygiene should focus on real generated directories like `.next` instead.
+- 2026-03-26T23:07:57Z: M4.1 is doc-and-hygiene only. Keep `deployments/localhost.json` tracked as the localhost source of truth, keep `app/next-env.d.ts` tracked in its stable build form, intentionally add `.nvmrc` and `pnpm-lock.yaml` as repo metadata, and do not broaden into contract, script, or UI feature work.
 
 ## Context and Orientation
 
@@ -233,7 +173,7 @@ completed successfully. I also loaded the page in a live local browser session a
 renders a clear disabled status instead of crashing when the localhost RPC or deployed contracts are
 not in a usable state. Manual happy-path wallet validation remains a follow-up on a supported local
 Node 22 LTS setup because a fresh localhost deploy hit a Hardhat cache issue under Node 25.6.1. The
-exact next submilestone is M2.5 add event timeline and final runbook.
+exact next submilestone from that point was M3.3 policy creation and by-id policy view.
 
 M3.3 and M3.4 are now complete. The UI dashboard now keeps wallet state, funding, policy creation,
 policy lookup, and policy actions in one client-side viem and wagmi path. `PolicyPanel` owns
@@ -286,3 +226,13 @@ node, and ready. `docs/ops/local-dev.md`, `docs/ops/demo-runbook.md`, and
 after builds. `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build` passed; live validation also
 confirmed the new probe reports `missing-bytecode` on a fresh node before deploy and `ready` after
 `pnpm deploy:local`.
+
+M4.1 is now complete. `README.md` has been rewritten around the real current product boundary,
+wallet-approval relevance, current UI scope, readiness states, manual browser walkthrough, and the
+current local command order. `docs/ops/local-dev.md`, `docs/ops/demo-runbook.md`, and
+`docs/architecture/frontend-data-flow.md` now match the live dashboard and script behavior without
+stale deferred wording, while keeping the "cap is authorization ceiling, not reserved escrow"
+story intact. Repo hygiene is explicit again: `deployments/localhost.json` stays tracked as the
+localhost deploy artifact, `app/next-env.d.ts` stays tracked in the stable `pnpm web:build` form,
+and `.nvmrc` plus `pnpm-lock.yaml` are intentional tracked repo metadata. This pass is deliberately
+runtime-neutral. The exact next submilestone is M4.2 screenshots and runbook polish.

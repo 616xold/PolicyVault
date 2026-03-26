@@ -6,31 +6,47 @@ This is the 5-minute demo sequence for the interview.
 
 Show that the project is a real, bounded on-chain MVP with a clean contract and TypeScript proof path.
 
-## Current proof path
+## Environment prep
 
-1. Show the repo structure and say why the scope is intentionally narrow.
-2. Show `MockUSDC` and `PolicyVault` in the contract layer.
-3. In a second terminal, run `pnpm node`.
-4. In a third terminal, run `pnpm deploy:local` and show the deterministic
-   `deployments/localhost.json` artifact.
-   - if a later `seed:local` or `demo:local` run says the artifact exists but no contract code is
-     present, you restarted localhost on a fresh node and should rerun `pnpm deploy:local`
-5. Run `pnpm seed:local` and point out the readable starting balances:
+Use this exact setup order:
+
+1. Run `pnpm node`.
+2. Run `pnpm deploy:local`.
+3. Run `pnpm abi:sync`.
+4. Run `pnpm seed:local`.
+5. Optionally run `pnpm demo:local`.
+6. Run `pnpm web:dev` if you want the browser walkthrough.
+
+Call out two repo truths while setting up:
+
+- `deployments/localhost.json` is the tracked localhost deployment source of truth.
+- If `seed:local`, `demo:local`, or the UI reports that addresses exist but no contract code is
+  present, localhost was restarted on a fresh node and you should rerun `pnpm deploy:local`, then
+  `pnpm abi:sync`.
+
+## Fast scripted proof path
+
+This is still the quickest way to prove the whole lifecycle.
+
+1. Show the repo structure and explain the intentionally narrow scope.
+2. Point at `MockUSDC` and `PolicyVault` as the only product contracts.
+3. Show the tracked `deployments/localhost.json` artifact after `pnpm deploy:local`.
+4. Show the readable seeded balances after `pnpm seed:local`:
    - owner: `250 mUSDC`
    - beneficiary: `80 mUSDC`
    - recovery receiver: `40 mUSDC`
-6. Run `pnpm demo:local` and narrate each validated transition:
+5. Run `pnpm demo:local` and narrate each scripted transition:
    - approve + deposit `60 mUSDC`
    - permit + deposit `15 mUSDC`
    - create a `30 mUSDC` policy
    - charge `12 mUSDC` within cap
-   - show the intentional over-cap revert as `CapExceeded(...)`
+   - intentional over-cap simulation revert as `CapExceeded(...)`
    - revoke the policy
    - withdraw the remaining `63 mUSDC` vault balance to the recovery receiver
-7. Close with the security and UX trade-off:
+6. Close with the product point:
    - bounded delegated spend
-   - permit vs approve
-   - why on-chain policy state improves clarity
+   - permit vs approve UX
+   - on-chain policy state and events instead of a vague wallet allowance alone
 
 ## Important narration note
 
@@ -41,7 +57,10 @@ after revoke," not "unlocking escrowed policy funds."
 
 ## UI walkthrough
 
-The UI now supports the full narratable flow, including the recent-event timeline:
+For a clean manual browser walkthrough, do this before `pnpm demo:local` so the first deposit,
+policy, charge, revoke, and withdraw still happen live in the dashboard.
+
+The current UI supports the full narratable flow:
 
 - connected wallet state
 - wallet balance, vault balance, and allowance
@@ -55,32 +74,31 @@ The UI now supports the full narratable flow, including the recent-event timelin
 - withdraw
 - recent `Deposited`, `PolicyCreated`, `Charged`, `PolicyRevoked`, and `Withdrawn` rows from
   PolicyVault logs
-- a small status surface showing whether the local deploy is ready and what the last write did
+- a small status surface showing readiness and the last confirmed write outcome
 
 Use it as an optional companion after `pnpm web:dev`:
 
 1. connect the owner wallet
-2. confirm the timeline card says `Demo ready`; if it says `Missing local deploy`, run
-   `pnpm deploy:local` and `pnpm abi:sync`; if it says `RPC offline`, start `pnpm node`; if it
-   says `No contract code`, you restarted localhost on a fresh node and should rerun
-   `pnpm deploy:local` and `pnpm abi:sync`
-3. fund the vault and point out that the timeline refreshes after the deposit receipt lands
-4. create a policy, copy the created policy id, and show the matching `PolicyCreated` row
-5. load that policy id to show owner, beneficiary, cap, spent, remaining, expiry, and revoked
-   state
-6. switch to the beneficiary wallet to charge and call out the `Charged` row with spent and
-   remaining values
-7. switch back to the owner wallet to revoke and withdraw, then show the final revoke and withdraw
-   rows together
-8. use the manual `Refresh timeline` button only if you want to prove the log reads are direct and
+2. confirm the dashboard reaches `Demo ready`
+3. if the readiness state is not `Demo ready`, explain it directly:
+   - `Missing local deploy`: rerun `pnpm deploy:local` and `pnpm abi:sync`
+   - `RPC offline`: start `pnpm node`
+   - `No contract code`: rerun `pnpm deploy:local` and `pnpm abi:sync` on the current node
+4. fund the vault and point out that the timeline refreshes after the deposit receipt lands
+5. create a policy, copy the returned policy id, and show the matching `PolicyCreated` row
+6. load that policy id to show owner, beneficiary, cap, spent, remaining, expiry, and revoked state
+7. switch to the beneficiary wallet to charge and call out the `Charged` row with spent and remaining values
+8. switch back to the owner wallet to revoke and withdraw, then show the final revoke and withdraw rows together
+9. use the manual `Refresh timeline` button only if you want to prove the log reads are direct and
    not backed by an indexer
 
 If you want one clear UI-side revert, either try an over-cap charge or click an owner-only or
 beneficiary-only action from the wrong wallet. The buttons stay visible on purpose so the contract
 result can be narrated directly.
 
-The scripted demo remains the fastest proof path, but the UI can now narrate the same lifecycle
-with readable event rows instead of raw log data.
+The scripted demo remains the fastest proof path, but the UI now narrates the same lifecycle with
+readable event rows, explicit readiness states, and manual policy-id lookup instead of a hidden
+indexer or policy list.
 
 ## Best talking points
 
@@ -97,4 +115,5 @@ Always include one explicit failing path:
 - charge after expiry
 - withdraw above available vault balance
 
-The current scripted demo uses the over-cap case and prints the custom error cleanly before any bad write is sent.
+The current scripted demo uses the over-cap case and prints the custom error cleanly before any bad
+write is sent.

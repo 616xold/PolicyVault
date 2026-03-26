@@ -2,9 +2,9 @@
 
 The UI exists to make the contract state legible.
 
-## Current dashboard slice
+## Current dashboard scope
 
-The current UI renders one small dashboard with five cards:
+The current UI renders one small dashboard that covers the full localhost MVP flow:
 
 - wallet connection and balance state
 - approve + deposit
@@ -14,7 +14,29 @@ The current UI renders one small dashboard with five cards:
 - charge
 - revoke
 - withdraw
-- recent PolicyVault event timeline with contract/demo status copy
+- recent PolicyVault event timeline with contract and demo status copy
+
+Policy ids remain manual in this MVP. The UI shows the created id after `createPolicy`, then lets
+the operator reload that policy by id without adding a policy list or an indexer.
+
+## Address and readiness model
+
+The app resolves contracts in this order:
+
+1. generated localhost addresses from `app/src/lib/generated/addresses.ts`
+2. env fallback addresses from `NEXT_PUBLIC_*`
+3. safe zero-address placeholder when neither source exists
+
+Before enabling contract reads or writes, the dashboard distinguishes four readiness states:
+
+1. `Missing local deploy`
+2. `RPC offline`
+3. `No contract code`
+4. `Demo ready`
+
+That readiness probe checks both configured addresses with `getCode`, so the app can tell the
+difference between "no synced deploy yet" and "saved addresses exist, but this fresh localhost node
+does not have those contracts deployed."
 
 ## Reads
 
@@ -48,13 +70,6 @@ The current UI renders one small dashboard with five cards:
 The dashboard container owns the wallet and chain logic so the visible panels can stay
 presentation-first.
 
-Before enabling contract reads or writes, the dashboard first proves four setup states:
-
-1. no configured addresses
-2. no usable RPC / public client
-3. configured addresses present but missing deployed bytecode at `MockUSDC` and/or `PolicyVault`
-4. ready
-
 For the classic deposit path:
 
 1. parse the amount with the live token decimals
@@ -63,7 +78,7 @@ For the classic deposit path:
 4. wait for the approval receipt if it was needed
 5. simulate `deposit`
 6. submit the deposit transaction
-7. wait for receipt and refresh balance, allowance, vault, and timeline reads
+7. wait for receipt and refresh wallet balance, allowance, vault balance, and timeline reads
 
 For the permit path:
 
@@ -73,7 +88,7 @@ For the permit path:
 4. ask the wallet to sign typed data
 5. simulate `depositWithPermit`
 6. submit the deposit transaction
-7. wait for receipt and refresh balance, allowance, vault balance, nonce, and timeline reads
+7. wait for receipt and refresh wallet balance, allowance, vault balance, nonce, and timeline reads
 
 For policy creation:
 
@@ -119,9 +134,9 @@ For the event timeline:
 The UI keeps owner-only and beneficiary-only actions visible. If the connected wallet is the wrong
 actor for a button, the simulation error is surfaced in the panel copy instead of hiding the action.
 
-If the generated addresses are placeholders, the local RPC is down, or the wallet is on the wrong
-chain, or the configured addresses point at empty contracts on a fresh localhost node, the UI
-should disable writes, keep policy lookup status explicit, show the timeline contract status, and
-avoid crashing.
+If the generated addresses are placeholders, the local RPC is down, the wallet is on the wrong
+chain, or the configured addresses point at empty contracts on a fresh localhost node, the UI keeps
+writes disabled, keeps policy lookup status explicit, shows the timeline contract status, and
+avoids crashing.
 
 The UI should help explain the system, not hide it.
