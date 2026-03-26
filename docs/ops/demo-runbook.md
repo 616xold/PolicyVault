@@ -39,15 +39,35 @@ after revoke," not "unlocking escrowed policy funds."
 
 ## UI note
 
-The UI now supports the first funding slice:
+The UI now supports the full policy/action slice short of the event timeline:
 
 - connected wallet state
 - wallet balance, vault balance, and allowance
 - approve + deposit
 - permit + deposit
+- create policy with beneficiary, cap, and expiry inputs
+- show the created policy id
+- load a policy by id
+- charge
+- revoke
+- withdraw
 
-Use it as an optional companion after `pnpm web:dev`, but keep policy creation, charge, revoke,
-withdraw, and event narration in the validated script flow until the later UI submilestones land.
+Use it as an optional companion after `pnpm web:dev`:
+
+1. connect the owner wallet
+2. fund the vault
+3. create a policy and copy the created policy id
+4. load that policy id to show owner, beneficiary, cap, spent, remaining, expiry, and revoked
+   state
+5. switch to the beneficiary wallet to charge
+6. switch back to the owner wallet to revoke and withdraw
+
+If you want one clear UI-side revert, either try an over-cap charge or click an owner-only or
+beneficiary-only action from the wrong wallet. The buttons stay visible on purpose so the contract
+result can be narrated directly.
+
+The event timeline is still deferred, so the scripted demo remains the primary proof path for full
+event narration.
 
 ## Best talking points
 

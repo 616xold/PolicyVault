@@ -12,7 +12,9 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T01:23:41Z M2.2 wire localhost deploy / seed / demo scripts with a deterministic deployment artifact, simulate-before-write demo flow, and live validation on a local node.
 - [x] 2026-03-26T01:33:26Z M2.3 make ABI and localhost address sync deterministic for the app by generating `app/src/lib/generated/abi.ts` from artifacts, generating `app/src/lib/generated/addresses.ts` from `deployments/localhost.json` with a placeholder fallback, and resolving app contract wiring from those generated files first.
 - [x] 2026-03-26T01:59:54Z M2.4 build the first real funding UI slice with a funding-only page, live wallet and balance reads, approve + deposit and permit + deposit actions, simulation-before-write, and production app build validation.
-- [ ] M2.5 add event timeline and final runbook
+- [x] 2026-03-26T02:12:40Z M3.3 add policy creation and by-id policy view to the UI with controlled inputs, created policy id feedback, on-demand `getPolicy` + `remaining` reads, and 6-decimal `MockUSDC` formatting.
+- [x] 2026-03-26T02:12:40Z M3.4 add charge, revoke, and withdraw UI actions with simulate-before-write viem calls, explicit actor guidance, status clearing, and post-write read refreshes.
+- [ ] M3.5 add event timeline and final demo polish
 
 ## Surprises & Discoveries
 
@@ -35,6 +37,13 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - On a fresh localhost node under Node.js `25.6.1`, `pnpm deploy:local` hit a Hardhat
   `compile-cache.json.tmp` rename failure, so live happy-path UI validation still depends on a
   supported Node 22 LTS setup even though the funding page now renders and degrades cleanly.
+- `simulateContract(createPolicy)` returns the deterministic policy id, so the UI can show the
+  exact created id and immediately reload that policy without waiting for event indexing.
+- Keeping funding and policy actions inside one small dashboard container was simpler than splitting
+  them into disconnected slices, because charge and withdraw both need to refresh the same visible
+  wallet and vault reads after a successful write.
+- `pnpm web:build` generated `app/next-env.d.ts` in the app workspace, so that file should be
+  removed after validation to keep the repo free of generated Next.js artifacts.
 
 ## Decision Log
 
@@ -70,6 +79,12 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
   paths simulate their contract writes immediately before sending them.
 - The permit UI derives the live token name and nonce from the token contract, while keeping the
   OpenZeppelin permit version `1` as an explicit app-side assumption.
+- M3.3 and M3.4 intentionally extend the same dashboard container instead of adding a second wallet
+  interaction path, so funding, vault balance, and policy refreshes stay in one obvious place.
+- Policy lookup stays manual and policy-id-first. We are intentionally not adding a policy list,
+  timeline, or indexer before M3.5.
+- The UI keeps charge, revoke, and withdraw buttons visible even for the wrong actor, and relies on
+  simulation plus explicit copy to explain owner-only versus beneficiary-only behavior.
 
 ## Context and Orientation
 
@@ -174,3 +189,14 @@ renders a clear disabled status instead of crashing when the localhost RPC or de
 not in a usable state. Manual happy-path wallet validation remains a follow-up on a supported local
 Node 22 LTS setup because a fresh localhost deploy hit a Hardhat cache issue under Node 25.6.1. The
 exact next submilestone is M2.5 add event timeline and final runbook.
+
+M3.3 and M3.4 are now complete. The UI dashboard now keeps wallet state, funding, policy creation,
+policy lookup, and policy actions in one client-side viem and wagmi path. `PolicyPanel` owns
+controlled beneficiary, cap, expiry, and policy-id inputs, shows the created policy id after a
+successful create, and displays owner, beneficiary, cap, spent, remaining, expiry, and revoked
+state from on-demand `getPolicy` and `remaining` reads. `ChargePanel` now owns controlled policy
+id, charge amount, withdraw amount, and withdraw receiver inputs, keeps charge, revoke, and
+withdraw visible with explicit actor guidance, simulates every write before sending it, and clears
+panel status state on demand. `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build` all completed
+successfully after the dashboard wiring landed. The exact next submilestone is M3.5 add event
+timeline and final demo polish.

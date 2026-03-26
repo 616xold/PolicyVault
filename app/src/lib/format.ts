@@ -20,3 +20,21 @@ export function formatTokenAmount(
 
   return symbol ? `${formatted} ${symbol}` : formatted;
 }
+
+export function formatUnixTimestamp(value: bigint | undefined): string {
+  if (value === undefined) {
+    return '--';
+  }
+
+  const seconds = value.toString();
+  const numericSeconds = Number(seconds);
+  if (!Number.isSafeInteger(numericSeconds)) {
+    return `${seconds} (unix)`;
+  }
+
+  const iso = new Date(numericSeconds * 1000)
+    .toISOString()
+    .replace('T', ' ')
+    .replace('.000Z', ' UTC');
+  return `${iso} (${seconds})`;
+}

@@ -1,4 +1,4 @@
-import { FundingSlice } from '../components/funding-slice.js';
+import { VaultDashboard } from '../components/vault-dashboard.js';
 
 export default function Page() {
   return (
@@ -14,12 +14,12 @@ export default function Page() {
       </section>
 
       <div className="grid two">
-        <FundingSlice />
+        <VaultDashboard />
       </div>
 
       <p className="note section-note">
-        This UI slice intentionally stops at funding. Policy creation, charge, revoke, withdraw, and
-        the event timeline stay deferred to the next submilestones.
+        Policy ids are the primary lookup key in this MVP. The event timeline is still intentionally
+        deferred to the next UI submilestone.
       </p>
     </main>
   );

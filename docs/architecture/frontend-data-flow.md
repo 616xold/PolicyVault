@@ -2,16 +2,20 @@
 
 The UI exists to make the contract state legible.
 
-## Current funding slice
+## Current dashboard slice
 
-M2.4 intentionally renders only the funding surface:
+The current UI renders one small dashboard with four cards:
 
 - wallet connection and balance state
 - approve + deposit
 - permit + deposit
+- create policy
+- inspect policy by id
+- charge
+- revoke
+- withdraw
 
-Policy creation, charge, revoke, withdraw, and the event timeline stay deferred until later
-submilestones.
+The event timeline is still intentionally deferred until the next UI submilestone.
 
 ## Reads
 
@@ -23,16 +27,22 @@ submilestones.
 - vault balance
 - allowance to the vault
 - next permit nonce for the connected owner
+- on-demand `getPolicy(policyId)`
+- on-demand `remaining(policyId)`
 
 ## Writes
 
 - approve token spend to the vault
 - deposit
 - deposit with permit
+- create policy
+- charge
+- revoke policy
+- withdraw
 
 ## Interaction discipline
 
-The funding container owns the wallet and chain logic so the visible panels can stay
+The dashboard container owns the wallet and chain logic so the visible panels can stay
 presentation-first.
 
 For the classic deposit path:
@@ -55,7 +65,42 @@ For the permit path:
 6. submit the deposit transaction
 7. wait for receipt and refresh balance, allowance, vault balance, and nonce reads
 
+For policy creation:
+
+1. parse the beneficiary address, cap amount, and expiry timestamp
+2. simulate `createPolicy`
+3. submit the transaction
+4. wait for receipt
+5. use the simulated return value as the created policy id shown in the UI
+6. refresh wallet reads and load the created policy by id
+
+For policy lookup:
+
+1. validate that the entered policy id is a 32-byte hex value
+2. read `getPolicy(policyId)` and `remaining(policyId)` from the local RPC
+3. display owner, beneficiary, cap, spent, remaining, expiry, and revoked status
+
+For charge and revoke:
+
+1. parse the policy id, and for charge also parse the charge amount with the live token decimals
+2. simulate the contract write
+3. submit the transaction
+4. wait for receipt
+5. refresh wallet reads and reload the same policy id
+
+For withdraw:
+
+1. parse the withdraw amount with the live token decimals
+2. parse the receiver address
+3. simulate `withdraw`
+4. submit the transaction
+5. wait for receipt and refresh wallet reads
+
+The UI keeps owner-only and beneficiary-only actions visible. If the connected wallet is the wrong
+actor for a button, the simulation error is surfaced in the panel copy instead of hiding the action.
+
 If the generated addresses are placeholders, the local RPC is down, or the wallet is on the wrong
-chain, the UI should disable funding actions and show a short status instead of crashing.
+chain, the UI should disable writes, keep policy lookup status explicit, and show a short status
+instead of crashing.
 
 The UI should help explain the system, not hide it.

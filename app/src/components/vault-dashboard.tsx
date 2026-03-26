@@ -1,0 +1,882 @@
+'use client';
+
+import { useState } from 'react';
+import { zeroAddress, type Hex } from 'viem';
+import {
+  useAccount,
+  useChainId,
+  useConnect,
+  useDisconnect,
+  usePublicClient,
+  useReadContracts,
+  useWalletClient,
+} from 'wagmi';
+
+import { ChargePanel } from './charge-panel.js';
+import { DepositPanel } from './deposit-panel.js';
+import { PolicyPanel } from './policy-panel.js';
+import { WalletState } from './wallet-state.js';
+import {
+  buildPermitDomain,
+  fundingTokenDefaults,
+  getActionErrorMessage,
+  parseFundingAmountInput,
+  permitTypes,
+  splitPermitSignature,
+  type FundingActionState,
+} from '../lib/funding.js';
+import { formatTokenAmount, shortAddress } from '../lib/format.js';
+import {
+  initialPolicyLookupState,
+  parseAddressInput,
+  parseExpiryInput,
+  parsePolicyAmountInput,
+  parsePolicyIdInput,
+  type PolicyDetails,
+  type PolicyLookupState,
+  type PolicyWriteState,
+} from '../lib/policy.js';
+import { contractConfig, mockUsdcContract, policyVaultContract } from '../lib/contracts.js';
+
+function describeAddressSource() {
+  switch (contractConfig.addressSource) {
+    case 'generated-localhost':
+      return 'Using generated localhost deployment addresses.';
+    case 'env-fallback':
+      return 'Using env fallback contract addresses.';
+    default:
+      return 'No synced contract addresses yet.';
+  }
+}
+
+export function VaultDashboard() {
+  const [depositAmount, setDepositAmount] = useState('');
+  const [fundingActionState, setFundingActionState] = useState<FundingActionState>({
+    phase: 'idle',
+  });
+  const [beneficiary, setBeneficiary] = useState('');
+  const [cap, setCap] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [policyLookupId, setPolicyLookupId] = useState('');
+  const [loadedPolicyId, setLoadedPolicyId] = useState<Hex | undefined>();
+  const [loadedPolicy, setLoadedPolicy] = useState<PolicyDetails | undefined>();
+  const [policyLookupState, setPolicyLookupState] =
+    useState<PolicyLookupState>(initialPolicyLookupState);
+  const [createdPolicyId, setCreatedPolicyId] = useState<Hex | undefined>();
+  const [createPolicyState, setCreatePolicyState] = useState<PolicyWriteState>({
+    phase: 'idle',
+  });
+  const [actionPolicyId, setActionPolicyId] = useState('');
+  const [chargeAmount, setChargeAmount] = useState('');
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawReceiver, setWithdrawReceiver] = useState('');
+  const [policyActionState, setPolicyActionState] = useState<PolicyWriteState>({
+    phase: 'idle',
+  });
+
+  const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const {
+    connectAsync,
+    connectors,
+    error: connectError,
+    isPending: isConnectPending,
+  } = useConnect();
+  const { disconnect, isPending: isDisconnectPending } = useDisconnect();
+  const publicClient = usePublicClient({ chainId: contractConfig.chainId });
+  const { data: walletClient } = useWalletClient({ chainId: contractConfig.chainId });
+
+  const isExpectedChain = !isConnected || chainId === contractConfig.chainId;
+  const selectedConnector = connectors[0];
+  const owner = address ?? zeroAddress;
+
+  const tokenMetadata = useReadContracts({
+    allowFailure: false,
+    contracts: [
+      { ...mockUsdcContract, functionName: 'name' },
+      { ...mockUsdcContract, functionName: 'symbol' },
+      { ...mockUsdcContract, functionName: 'decimals' },
+    ],
+    query: {
+      enabled: contractConfig.hasConfiguredAddresses,
+    },
+  });
+
+  const accountReads = useReadContracts({
+    allowFailure: false,
+    contracts: [
+      { ...mockUsdcContract, functionName: 'balanceOf', args: [owner] },
+      { ...policyVaultContract, functionName: 'vaultBalanceOf', args: [owner] },
+      {
+        ...mockUsdcContract,
+        functionName: 'allowance',
+        args: [owner, policyVaultContract.address],
+      },
+      { ...mockUsdcContract, functionName: 'nonces', args: [owner] },
+    ],
+    query: {
+      enabled:
+        contractConfig.hasConfiguredAddresses &&
+        Boolean(address) &&
+        isExpectedChain &&
+        Boolean(publicClient),
+    },
+  });
+
+  const tokenName = tokenMetadata.data?.[0] ?? fundingTokenDefaults.name;
+  const tokenSymbol = tokenMetadata.data?.[1] ?? fundingTokenDefaults.symbol;
+  const tokenDecimals = tokenMetadata.data?.[2] ?? fundingTokenDefaults.decimals;
+  const walletBalance = accountReads.data?.[0];
+  const vaultBalance = accountReads.data?.[1];
+  const allowance = accountReads.data?.[2];
+
+  let parsedDepositAmount: bigint | undefined;
+  let depositAmountError: string | undefined;
+  try {
+    if (depositAmount.trim()) {
+      parsedDepositAmount = parseFundingAmountInput(depositAmount, tokenDecimals);
+    }
+  } catch (error) {
+    depositAmountError = getActionErrorMessage(error);
+  }
+
+  let parsedCapAmount: bigint | undefined;
+  try {
+    if (cap.trim()) {
+      parsedCapAmount = parsePolicyAmountInput(cap, tokenDecimals, 'cap amount');
+    }
+  } catch {
+    parsedCapAmount = undefined;
+  }
+
+  let parsedChargeAmount: bigint | undefined;
+  try {
+    if (chargeAmount.trim()) {
+      parsedChargeAmount = parsePolicyAmountInput(chargeAmount, tokenDecimals, 'charge amount');
+    }
+  } catch {
+    parsedChargeAmount = undefined;
+  }
+
+  let parsedWithdrawAmount: bigint | undefined;
+  try {
+    if (withdrawAmount.trim()) {
+      parsedWithdrawAmount = parsePolicyAmountInput(
+        withdrawAmount,
+        tokenDecimals,
+        'withdraw amount',
+      );
+    }
+  } catch {
+    parsedWithdrawAmount = undefined;
+  }
+
+  const readDisabledReason = !contractConfig.hasConfiguredAddresses
+    ? 'Run pnpm deploy:local and pnpm abi:sync first.'
+    : !publicClient
+      ? 'Start the local RPC with pnpm node.'
+      : undefined;
+
+  const writeDisabledReason = !contractConfig.hasConfiguredAddresses
+    ? 'Run pnpm deploy:local and pnpm abi:sync first.'
+    : !publicClient
+      ? 'Start the local RPC with pnpm node.'
+      : !isConnected
+        ? 'Connect a wallet to send PolicyVault writes.'
+        : !isExpectedChain
+          ? `Switch the wallet to localhost (${contractConfig.chainId}).`
+          : !walletClient
+            ? 'Unlock the connected wallet to prepare transactions.'
+            : tokenMetadata.isPending
+              ? 'Loading token metadata.'
+              : tokenMetadata.error
+                ? `Token reads failed: ${getActionErrorMessage(tokenMetadata.error)}`
+                : undefined;
+
+  const allowanceCoversAmount =
+    parsedDepositAmount !== undefined && allowance !== undefined
+      ? allowance >= parsedDepositAmount
+      : undefined;
+
+  async function refreshFundingReads() {
+    await tokenMetadata.refetch();
+
+    if (address && isExpectedChain) {
+      await accountReads.refetch();
+    }
+  }
+
+  async function loadPolicyById(
+    policyIdValue: string | Hex,
+    options?: {
+      announce?: boolean;
+      preserveOnError?: boolean;
+      successMessage?: string;
+    },
+  ) {
+    const announce = options?.announce ?? true;
+
+    try {
+      if (!contractConfig.hasConfiguredAddresses) {
+        throw new Error('Run pnpm deploy:local and pnpm abi:sync first.');
+      }
+
+      if (!publicClient) {
+        throw new Error('Start the local RPC with pnpm node.');
+      }
+
+      const policyId =
+        typeof policyIdValue === 'string' ? parsePolicyIdInput(policyIdValue) : policyIdValue;
+
+      if (announce) {
+        setPolicyLookupState({
+          phase: 'loading',
+          message: 'Loading policy state.',
+        });
+      }
+
+      const [policy, remaining] = await Promise.all([
+        publicClient.readContract({
+          ...policyVaultContract,
+          functionName: 'getPolicy',
+          args: [policyId],
+        }),
+        publicClient.readContract({
+          ...policyVaultContract,
+          functionName: 'remaining',
+          args: [policyId],
+        }),
+      ]);
+
+      setLoadedPolicy({
+        owner: policy.owner,
+        beneficiary: policy.beneficiary,
+        cap: policy.cap,
+        spent: policy.spent,
+        remaining,
+        expiresAt: policy.expiresAt,
+        revoked: policy.revoked,
+      });
+      setLoadedPolicyId(policyId);
+      setPolicyLookupId(policyId);
+      setPolicyLookupState({
+        phase: 'success',
+        message: options?.successMessage ?? 'Policy loaded.',
+      });
+    } catch (error) {
+      if (!options?.preserveOnError) {
+        setLoadedPolicy(undefined);
+        setLoadedPolicyId(undefined);
+      }
+
+      setPolicyLookupState({
+        phase: 'error',
+        message: getActionErrorMessage(error),
+      });
+    }
+  }
+
+  async function refreshDashboardReads(policyId?: Hex) {
+    await refreshFundingReads();
+
+    const policyToRefresh = policyId ?? loadedPolicyId;
+    if (policyToRefresh) {
+      await loadPolicyById(policyToRefresh, {
+        announce: false,
+        preserveOnError: true,
+      });
+    }
+  }
+
+  async function handleConnect() {
+    if (!selectedConnector) return;
+
+    try {
+      await connectAsync({ connector: selectedConnector });
+    } catch {
+      // The wagmi hook already exposes the latest connect error for the panel.
+    }
+  }
+
+  function resetFundingActionState() {
+    if (fundingActionState.phase !== 'idle') {
+      setFundingActionState({ phase: 'idle' });
+    }
+  }
+
+  function resetCreatePolicyState() {
+    if (createPolicyState.phase !== 'idle') {
+      setCreatePolicyState({ phase: 'idle' });
+    }
+  }
+
+  function resetPolicyActionState() {
+    if (policyActionState.phase !== 'idle') {
+      setPolicyActionState({ phase: 'idle' });
+    }
+  }
+
+  function updateDepositAmount(nextAmount: string) {
+    resetFundingActionState();
+    setDepositAmount(nextAmount);
+  }
+
+  function updateBeneficiary(nextBeneficiary: string) {
+    resetCreatePolicyState();
+    setBeneficiary(nextBeneficiary);
+  }
+
+  function updateCap(nextCap: string) {
+    resetCreatePolicyState();
+    setCap(nextCap);
+  }
+
+  function updateExpiry(nextExpiry: string) {
+    resetCreatePolicyState();
+    setExpiry(nextExpiry);
+  }
+
+  function updatePolicyLookupId(nextPolicyId: string) {
+    if (policyLookupState.phase !== 'idle') {
+      setPolicyLookupState(initialPolicyLookupState);
+    }
+    setPolicyLookupId(nextPolicyId);
+  }
+
+  function updateActionPolicyId(nextPolicyId: string) {
+    resetPolicyActionState();
+    setActionPolicyId(nextPolicyId);
+  }
+
+  function updateChargeAmount(nextChargeAmount: string) {
+    resetPolicyActionState();
+    setChargeAmount(nextChargeAmount);
+  }
+
+  function updateWithdrawAmount(nextWithdrawAmount: string) {
+    resetPolicyActionState();
+    setWithdrawAmount(nextWithdrawAmount);
+  }
+
+  function updateWithdrawReceiver(nextReceiver: string) {
+    resetPolicyActionState();
+    setWithdrawReceiver(nextReceiver);
+  }
+
+  function requireWrite() {
+    if (writeDisabledReason) {
+      throw new Error(writeDisabledReason.replace(/`/g, ''));
+    }
+
+    if (!address || !publicClient || !walletClient) {
+      throw new Error('Wallet connection is not ready.');
+    }
+
+    return {
+      owner: address,
+      publicClient,
+      walletClient,
+    };
+  }
+
+  async function handleApproveDeposit() {
+    resetFundingActionState();
+
+    try {
+      const amount = parseFundingAmountInput(depositAmount, tokenDecimals);
+      const { owner: connectedOwner, publicClient: reader, walletClient: signer } = requireWrite();
+
+      const currentAllowance = await reader.readContract({
+        ...mockUsdcContract,
+        functionName: 'allowance',
+        args: [connectedOwner, policyVaultContract.address],
+      });
+
+      let approvalWasSent = false;
+      if (currentAllowance < amount) {
+        const approvalSimulation = await reader.simulateContract({
+          ...mockUsdcContract,
+          account: signer.account,
+          functionName: 'approve',
+          args: [policyVaultContract.address, amount],
+        });
+
+        setFundingActionState({
+          phase: 'pending',
+          mode: 'approve',
+          step: 'approving',
+          message: 'Approval pending.',
+        });
+
+        const approvalHash = await signer.writeContract(approvalSimulation.request);
+        approvalWasSent = true;
+        setFundingActionState({
+          phase: 'pending',
+          mode: 'approve',
+          step: 'approving',
+          message: 'Approval pending.',
+          txHash: approvalHash,
+        });
+        await reader.waitForTransactionReceipt({ hash: approvalHash });
+      }
+
+      const depositSimulation = await reader.simulateContract({
+        ...policyVaultContract,
+        account: signer.account,
+        functionName: 'deposit',
+        args: [amount],
+      });
+
+      setFundingActionState({
+        phase: 'pending',
+        mode: 'approve',
+        step: 'depositing',
+        message: 'Deposit pending.',
+      });
+
+      const depositHash = await signer.writeContract(depositSimulation.request);
+      setFundingActionState({
+        phase: 'pending',
+        mode: 'approve',
+        step: 'depositing',
+        message: 'Deposit pending.',
+        txHash: depositHash,
+      });
+
+      await reader.waitForTransactionReceipt({ hash: depositHash });
+      await refreshDashboardReads();
+
+      setFundingActionState({
+        phase: 'success',
+        mode: 'approve',
+        message: approvalWasSent ? 'Approval and deposit confirmed.' : 'Deposit confirmed.',
+        txHash: depositHash,
+      });
+    } catch (error) {
+      await refreshDashboardReads().catch(() => undefined);
+      setFundingActionState({
+        phase: 'error',
+        mode: 'approve',
+        message: getActionErrorMessage(error),
+      });
+    }
+  }
+
+  async function handlePermitDeposit() {
+    resetFundingActionState();
+
+    try {
+      const amount = parseFundingAmountInput(depositAmount, tokenDecimals);
+      const { owner: connectedOwner, publicClient: reader, walletClient: signer } = requireWrite();
+
+      const [liveTokenName, liveNonce] = await Promise.all([
+        reader.readContract({
+          ...mockUsdcContract,
+          functionName: 'name',
+        }),
+        reader.readContract({
+          ...mockUsdcContract,
+          functionName: 'nonces',
+          args: [connectedOwner],
+        }),
+      ]);
+
+      const deadline = BigInt(Math.floor(Date.now() / 1000) + 30 * 60);
+
+      setFundingActionState({
+        phase: 'pending',
+        mode: 'permit',
+        step: 'signing',
+        message: 'Check the wallet to sign the permit.',
+      });
+
+      const signature = await signer.signTypedData({
+        account: signer.account,
+        domain: buildPermitDomain(liveTokenName, contractConfig.chainId, mockUsdcContract.address),
+        types: permitTypes,
+        primaryType: 'Permit',
+        message: {
+          owner: connectedOwner,
+          spender: policyVaultContract.address,
+          value: amount,
+          nonce: liveNonce,
+          deadline,
+        },
+      });
+
+      const { r, s, v } = splitPermitSignature(signature);
+      const permitSimulation = await reader.simulateContract({
+        ...policyVaultContract,
+        account: signer.account,
+        functionName: 'depositWithPermit',
+        args: [amount, deadline, v, r, s],
+      });
+
+      setFundingActionState({
+        phase: 'pending',
+        mode: 'permit',
+        step: 'depositing',
+        message: 'Permit deposit pending.',
+      });
+
+      const depositHash = await signer.writeContract(permitSimulation.request);
+      setFundingActionState({
+        phase: 'pending',
+        mode: 'permit',
+        step: 'depositing',
+        message: 'Permit deposit pending.',
+        txHash: depositHash,
+      });
+
+      await reader.waitForTransactionReceipt({ hash: depositHash });
+      await refreshDashboardReads();
+
+      setFundingActionState({
+        phase: 'success',
+        mode: 'permit',
+        message: 'Permit deposit confirmed.',
+        txHash: depositHash,
+      });
+    } catch (error) {
+      await refreshDashboardReads().catch(() => undefined);
+      setFundingActionState({
+        phase: 'error',
+        mode: 'permit',
+        message: getActionErrorMessage(error),
+      });
+    }
+  }
+
+  async function handleCreatePolicy() {
+    resetCreatePolicyState();
+
+    try {
+      const parsedBeneficiary = parseAddressInput(beneficiary, 'beneficiary');
+      const parsedCap = parsePolicyAmountInput(cap, tokenDecimals, 'cap amount');
+      const parsedExpiry = parseExpiryInput(expiry);
+      const { publicClient: reader, walletClient: signer } = requireWrite();
+
+      const createSimulation = await reader.simulateContract({
+        ...policyVaultContract,
+        account: signer.account,
+        functionName: 'createPolicy',
+        args: [parsedBeneficiary, parsedCap, parsedExpiry],
+      });
+
+      setCreatePolicyState({
+        phase: 'pending',
+        action: 'create',
+        message: 'Create policy pending.',
+      });
+
+      const createHash = await signer.writeContract(createSimulation.request);
+      setCreatePolicyState({
+        phase: 'pending',
+        action: 'create',
+        message: 'Create policy pending.',
+        txHash: createHash,
+      });
+
+      await reader.waitForTransactionReceipt({ hash: createHash });
+
+      const nextPolicyId = createSimulation.result;
+      setCreatedPolicyId(nextPolicyId);
+      setPolicyLookupId(nextPolicyId);
+      setActionPolicyId(nextPolicyId);
+
+      await refreshDashboardReads(nextPolicyId);
+
+      setCreatePolicyState({
+        phase: 'success',
+        action: 'create',
+        message: 'Policy created and loaded.',
+        txHash: createHash,
+      });
+    } catch (error) {
+      await refreshDashboardReads().catch(() => undefined);
+      setCreatePolicyState({
+        phase: 'error',
+        action: 'create',
+        message: getActionErrorMessage(error),
+      });
+    }
+  }
+
+  async function handleLoadPolicy() {
+    await loadPolicyById(policyLookupId);
+  }
+
+  async function handleCharge() {
+    resetPolicyActionState();
+
+    try {
+      const policyId = parsePolicyIdInput(actionPolicyId);
+      const amount = parsePolicyAmountInput(chargeAmount, tokenDecimals, 'charge amount');
+      const { publicClient: reader, walletClient: signer } = requireWrite();
+
+      const chargeSimulation = await reader.simulateContract({
+        ...policyVaultContract,
+        account: signer.account,
+        functionName: 'charge',
+        args: [policyId, amount],
+      });
+
+      setPolicyActionState({
+        phase: 'pending',
+        action: 'charge',
+        message: 'Charge pending.',
+      });
+
+      const chargeHash = await signer.writeContract(chargeSimulation.request);
+      setPolicyActionState({
+        phase: 'pending',
+        action: 'charge',
+        message: 'Charge pending.',
+        txHash: chargeHash,
+      });
+
+      await reader.waitForTransactionReceipt({ hash: chargeHash });
+      setPolicyLookupId(policyId);
+      await refreshDashboardReads(policyId);
+
+      setPolicyActionState({
+        phase: 'success',
+        action: 'charge',
+        message: 'Charge confirmed and policy refreshed.',
+        txHash: chargeHash,
+      });
+    } catch (error) {
+      await refreshDashboardReads().catch(() => undefined);
+      setPolicyActionState({
+        phase: 'error',
+        action: 'charge',
+        message: getActionErrorMessage(error),
+      });
+    }
+  }
+
+  async function handleRevoke() {
+    resetPolicyActionState();
+
+    try {
+      const policyId = parsePolicyIdInput(actionPolicyId);
+      const { publicClient: reader, walletClient: signer } = requireWrite();
+
+      const revokeSimulation = await reader.simulateContract({
+        ...policyVaultContract,
+        account: signer.account,
+        functionName: 'revokePolicy',
+        args: [policyId],
+      });
+
+      setPolicyActionState({
+        phase: 'pending',
+        action: 'revoke',
+        message: 'Revoke pending.',
+      });
+
+      const revokeHash = await signer.writeContract(revokeSimulation.request);
+      setPolicyActionState({
+        phase: 'pending',
+        action: 'revoke',
+        message: 'Revoke pending.',
+        txHash: revokeHash,
+      });
+
+      await reader.waitForTransactionReceipt({ hash: revokeHash });
+      setPolicyLookupId(policyId);
+      await refreshDashboardReads(policyId);
+
+      setPolicyActionState({
+        phase: 'success',
+        action: 'revoke',
+        message: 'Policy revoked and refreshed.',
+        txHash: revokeHash,
+      });
+    } catch (error) {
+      await refreshDashboardReads().catch(() => undefined);
+      setPolicyActionState({
+        phase: 'error',
+        action: 'revoke',
+        message: getActionErrorMessage(error),
+      });
+    }
+  }
+
+  async function handleWithdraw() {
+    resetPolicyActionState();
+
+    try {
+      const amount = parsePolicyAmountInput(withdrawAmount, tokenDecimals, 'withdraw amount');
+      const receiver = parseAddressInput(withdrawReceiver, 'withdraw receiver');
+      const { publicClient: reader, walletClient: signer } = requireWrite();
+
+      const withdrawSimulation = await reader.simulateContract({
+        ...policyVaultContract,
+        account: signer.account,
+        functionName: 'withdraw',
+        args: [amount, receiver],
+      });
+
+      setPolicyActionState({
+        phase: 'pending',
+        action: 'withdraw',
+        message: 'Withdraw pending.',
+      });
+
+      const withdrawHash = await signer.writeContract(withdrawSimulation.request);
+      setPolicyActionState({
+        phase: 'pending',
+        action: 'withdraw',
+        message: 'Withdraw pending.',
+        txHash: withdrawHash,
+      });
+
+      await reader.waitForTransactionReceipt({ hash: withdrawHash });
+      await refreshDashboardReads();
+
+      setPolicyActionState({
+        phase: 'success',
+        action: 'withdraw',
+        message: 'Withdraw confirmed.',
+        txHash: withdrawHash,
+      });
+    } catch (error) {
+      await refreshDashboardReads().catch(() => undefined);
+      setPolicyActionState({
+        phase: 'error',
+        action: 'withdraw',
+        message: getActionErrorMessage(error),
+      });
+    }
+  }
+
+  const connectionStatus = isConnectPending
+    ? 'Connecting'
+    : isConnected && !isExpectedChain
+      ? 'Wrong network'
+      : isConnected
+        ? 'Connected'
+        : selectedConnector
+          ? 'Disconnected'
+          : 'No wallet';
+
+  const walletStateNote = !contractConfig.hasConfiguredAddresses
+    ? 'Run pnpm deploy:local and pnpm abi:sync to materialize the local contract addresses before using the dashboard.'
+    : !publicClient
+      ? 'The local JSON-RPC client is unavailable. Start pnpm node before testing the funding and policy flows.'
+      : !isConnected
+        ? 'Connect the owner or beneficiary wallet to read balances, fund the vault, and send policy actions.'
+        : !isExpectedChain
+          ? `Switch the wallet to localhost (${contractConfig.chainId}) to read the local vault state.`
+          : accountReads.error
+            ? `Funding reads failed: ${getActionErrorMessage(accountReads.error)}`
+            : `${describeAddressSource()} Vault ${shortAddress(policyVaultContract.address)}.`;
+
+  const allowanceHint = depositAmountError
+    ? depositAmountError
+    : parsedDepositAmount === undefined
+      ? 'Approve sends a token approval first when needed. Permit signs typed data and deposits in one contract write.'
+      : allowanceCoversAmount
+        ? 'Current allowance already covers this deposit amount.'
+        : 'This amount will require an approval before deposit.';
+
+  return (
+    <>
+      <WalletState
+        address={address}
+        allowance={formatTokenAmount(allowance, tokenDecimals, tokenSymbol)}
+        connectError={connectError ? getActionErrorMessage(connectError) : undefined}
+        connectionStatus={connectionStatus}
+        disableConnect={!selectedConnector}
+        isConnectPending={isConnectPending}
+        isConnected={isConnected}
+        isDisconnectPending={isDisconnectPending}
+        note={walletStateNote}
+        onConnect={handleConnect}
+        onDisconnect={() => disconnect()}
+        tokenBalance={formatTokenAmount(walletBalance, tokenDecimals, tokenSymbol)}
+        tokenLabel={tokenSymbol}
+        vaultBalance={formatTokenAmount(vaultBalance, tokenDecimals, tokenSymbol)}
+      />
+
+      <DepositPanel
+        actionState={fundingActionState}
+        allowanceHint={allowanceHint}
+        amount={depositAmount}
+        amountPreview={
+          parsedDepositAmount !== undefined
+            ? formatTokenAmount(parsedDepositAmount, tokenDecimals, tokenSymbol)
+            : ''
+        }
+        disabledReason={writeDisabledReason}
+        isBusy={fundingActionState.phase === 'pending'}
+        onAmountChange={updateDepositAmount}
+        onApproveDeposit={handleApproveDeposit}
+        onPermitDeposit={handlePermitDeposit}
+        tokenName={tokenName}
+        tokenSymbol={tokenSymbol}
+        walletBalance={formatTokenAmount(walletBalance, tokenDecimals, tokenSymbol)}
+      />
+
+      <PolicyPanel
+        beneficiary={beneficiary}
+        cap={cap}
+        capPreview={
+          parsedCapAmount !== undefined
+            ? formatTokenAmount(parsedCapAmount, tokenDecimals, tokenSymbol)
+            : ''
+        }
+        createDisabledReason={writeDisabledReason}
+        createState={createPolicyState}
+        createdPolicyId={createdPolicyId}
+        expiry={expiry}
+        isCreateBusy={createPolicyState.phase === 'pending'}
+        isLookupBusy={policyLookupState.phase === 'loading'}
+        loadedPolicy={loadedPolicy}
+        loadedPolicyId={loadedPolicyId}
+        lookupDisabledReason={readDisabledReason}
+        lookupPolicyId={policyLookupId}
+        lookupState={policyLookupState}
+        onBeneficiaryChange={updateBeneficiary}
+        onCapChange={updateCap}
+        onClearCreateState={resetCreatePolicyState}
+        onCreatePolicy={handleCreatePolicy}
+        onExpiryChange={updateExpiry}
+        onLoadPolicy={handleLoadPolicy}
+        onLookupPolicyIdChange={updatePolicyLookupId}
+        tokenDecimals={tokenDecimals}
+        tokenSymbol={tokenSymbol}
+      />
+
+      <ChargePanel
+        actionPolicyId={actionPolicyId}
+        actionState={policyActionState}
+        chargeAmount={chargeAmount}
+        chargePreview={
+          parsedChargeAmount !== undefined
+            ? formatTokenAmount(parsedChargeAmount, tokenDecimals, tokenSymbol)
+            : ''
+        }
+        disabledReason={writeDisabledReason}
+        isBusy={policyActionState.phase === 'pending'}
+        onActionPolicyIdChange={updateActionPolicyId}
+        onCharge={handleCharge}
+        onChargeAmountChange={updateChargeAmount}
+        onClearStatus={resetPolicyActionState}
+        onRevoke={handleRevoke}
+        onWithdraw={handleWithdraw}
+        onWithdrawAmountChange={updateWithdrawAmount}
+        onWithdrawReceiverChange={updateWithdrawReceiver}
+        tokenSymbol={tokenSymbol}
+        withdrawAmount={withdrawAmount}
+        withdrawPreview={
+          parsedWithdrawAmount !== undefined
+            ? formatTokenAmount(parsedWithdrawAmount, tokenDecimals, tokenSymbol)
+            : ''
+        }
+        withdrawReceiver={withdrawReceiver}
+      />
+    </>
+  );
+}
