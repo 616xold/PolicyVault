@@ -1,4 +1,49 @@
-export function DepositPanel() {
+'use client';
+
+import type { FundingActionState } from '../lib/funding.js';
+
+type DepositPanelProps = {
+  actionState: FundingActionState;
+  allowanceHint: string;
+  amount: string;
+  amountPreview: string;
+  disabledReason?: string;
+  isBusy: boolean;
+  onAmountChange: (value: string) => void;
+  onApproveDeposit: () => void;
+  onPermitDeposit: () => void;
+  tokenName: string;
+  tokenSymbol: string;
+  walletBalance: string;
+};
+
+export function DepositPanel({
+  actionState,
+  allowanceHint,
+  amount,
+  amountPreview,
+  disabledReason,
+  isBusy,
+  onAmountChange,
+  onApproveDeposit,
+  onPermitDeposit,
+  tokenName,
+  tokenSymbol,
+  walletBalance,
+}: DepositPanelProps) {
+  const statusClass =
+    actionState.phase === 'pending'
+      ? 'pending'
+      : actionState.phase === 'success'
+        ? 'success'
+        : actionState.phase === 'error'
+          ? 'error'
+          : '';
+  const statusTxHash =
+    actionState.phase === 'pending' || actionState.phase === 'success'
+      ? actionState.txHash
+      : undefined;
+
   return (
     <section className="card stack">
       <h2 className="panel-title">Deposit</h2>
@@ -6,23 +51,47 @@ export function DepositPanel() {
         <label className="label" htmlFor="deposit-amount">
           Amount
         </label>
-        <input id="deposit-amount" placeholder="100.00 mUSDC" />
+        <input
+          id="deposit-amount"
+          inputMode="decimal"
+          placeholder={`100.00 ${tokenSymbol}`}
+          value={amount}
+          onChange={(event) => onAmountChange(event.target.value)}
+        />
+        <div className="inline-meta">
+          <span className="label">Wallet balance</span>
+          <span className="value small-value">{walletBalance}</span>
+        </div>
+        <div className="inline-meta">
+          <span className="label">Preview</span>
+          <span className="value small-value">{amountPreview || 'Enter an amount'}</span>
+        </div>
       </div>
-      <div
-        className="stack"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-        }}
-      >
-        <button type="button">Approve + deposit</button>
-        <button type="button" className="secondary">
+      <p className="note">{disabledReason ?? allowanceHint}</p>
+      <div className="button-row">
+        <button type="button" disabled={Boolean(disabledReason) || isBusy || !amount.trim()} onClick={onApproveDeposit}>
+          {isBusy && actionState.phase === 'pending' && actionState.mode === 'approve'
+            ? 'Processing…'
+            : 'Approve + deposit'}
+        </button>
+        <button
+          type="button"
+          className="secondary"
+          disabled={Boolean(disabledReason) || isBusy || !amount.trim()}
+          onClick={onPermitDeposit}
+        >
           Permit + deposit
         </button>
       </div>
-      <p className="note">
-        Keep both paths visible. The interview story is stronger when the UI makes approve vs permit explicit.
-      </p>
+      {actionState.phase !== 'idle' ? (
+        <div className={`status-box ${statusClass}`}>
+          <p className="status-copy">{actionState.message}</p>
+          {statusTxHash ? (
+            <p className="status-copy label">Tx {statusTxHash}</p>
+          ) : null}
+        </div>
+      ) : null}
+      <p className="note">{tokenName} keeps both funding paths visible so the approve versus permit trade-off stays easy to narrate.</p>
     </section>
   );
 }

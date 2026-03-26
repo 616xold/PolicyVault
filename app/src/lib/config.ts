@@ -1,4 +1,4 @@
-import { contractAddresses } from './contract-addresses';
+import { contractAddresses } from './contract-addresses.js';
 
 export const projectConfig = {
   name: 'PolicyVault',

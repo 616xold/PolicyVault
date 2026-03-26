@@ -39,9 +39,15 @@ after revoke," not "unlocking escrowed policy funds."
 
 ## UI note
 
-The wallet-connected UI spine is the next submilestone.
+The UI now supports the first funding slice:
 
-For the current repo state, the strongest proof path is the validated local script flow, not a UI walkthrough.
+- connected wallet state
+- wallet balance, vault balance, and allowance
+- approve + deposit
+- permit + deposit
+
+Use it as an optional companion after `pnpm web:dev`, but keep policy creation, charge, revoke,
+withdraw, and event narration in the validated script flow until the later UI submilestones land.
 
 ## Best talking points
 

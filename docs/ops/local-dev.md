@@ -10,6 +10,9 @@ pnpm compile
 pnpm test
 ```
 
+Hardhat local scripts are safest on Node 22 LTS. Hardhat currently warns on Node 25.x, and a fresh
+localhost deploy may hit cache-related issues there even though compile and app builds still work.
+
 ## Run the local chain
 
 ```bash
@@ -69,6 +72,27 @@ pnpm web:dev
 ```bash
 pnpm web:dev
 ```
+
+The current UI scope is intentionally narrow:
+
+- wallet connection and funding state
+- approve + deposit
+- permit + deposit
+
+Policy creation, charge, revoke, withdraw, and the event timeline are still deferred.
+
+If the generated addresses are placeholders, the local RPC is down, or the wallet is on the wrong
+chain, the funding controls stay disabled and the page shows a short status instead of crashing.
+
+For a manual happy-path funding check in the browser:
+
+1. run `pnpm node`
+2. run `pnpm deploy:local`
+3. run `pnpm abi:sync`
+4. run `pnpm seed:local`
+5. run `pnpm web:dev`
+6. connect localhost account `#0` in the wallet extension
+7. deposit through either the approve or permit path and confirm the balances refresh after receipt
 
 ## Recommended wallet setup
 

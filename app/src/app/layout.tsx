@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import './globals.css';
 
-import { Providers } from './providers';
+import { Providers } from './providers.js';
 
 export const metadata = {
   title: 'PolicyVault',

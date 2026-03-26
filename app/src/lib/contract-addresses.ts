@@ -1,4 +1,4 @@
-import { generatedAddresses, hasGeneratedLocalhostAddresses } from './generated/addresses';
+import { generatedAddresses, hasGeneratedLocalhostAddresses } from './generated/addresses.js';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const generatedLocalhostAddresses = generatedAddresses.localhost;
@@ -29,8 +29,8 @@ export const hasEnvAddressFallback =
 const envFallbackContractAddresses: ContractAddresses | undefined = hasEnvAddressFallback
   ? {
       chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? generatedLocalhostAddresses.chainId),
-      policyVault: envFallbackAddresses.policyVault,
-      mockUsdc: envFallbackAddresses.mockUsdc,
+      policyVault: envFallbackAddresses.policyVault!,
+      mockUsdc: envFallbackAddresses.mockUsdc!,
     }
   : undefined;
 

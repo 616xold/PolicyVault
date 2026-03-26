@@ -1,8 +1,4 @@
-import { ChargePanel } from '../components/charge-panel';
-import { DepositPanel } from '../components/deposit-panel';
-import { EventTimeline } from '../components/event-timeline';
-import { PolicyPanel } from '../components/policy-panel';
-import { WalletState } from '../components/wallet-state';
+import { FundingSlice } from '../components/funding-slice.js';
 
 export default function Page() {
   return (
@@ -18,15 +14,13 @@ export default function Page() {
       </section>
 
       <div className="grid two">
-        <WalletState />
-        <DepositPanel />
-        <PolicyPanel />
-        <ChargePanel />
+        <FundingSlice />
       </div>
 
-      <div className="grid" style={{ marginTop: 16 }}>
-        <EventTimeline />
-      </div>
+      <p className="note section-note">
+        This UI slice intentionally stops at funding. Policy creation, charge, revoke, withdraw, and
+        the event timeline stay deferred to the next submilestones.
+      </p>
     </main>
   );
 }

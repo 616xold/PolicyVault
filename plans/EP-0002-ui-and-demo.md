@@ -11,7 +11,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T00:15:16Z M2.1 implement permit deposit path with a shared internal deposit helper, focused permit tests, and no public ABI change.
 - [x] 2026-03-26T01:23:41Z M2.2 wire localhost deploy / seed / demo scripts with a deterministic deployment artifact, simulate-before-write demo flow, and live validation on a local node.
 - [x] 2026-03-26T01:33:26Z M2.3 make ABI and localhost address sync deterministic for the app by generating `app/src/lib/generated/abi.ts` from artifacts, generating `app/src/lib/generated/addresses.ts` from `deployments/localhost.json` with a placeholder fallback, and resolving app contract wiring from those generated files first.
-- [ ] M2.4 build UI state panels
+- [x] 2026-03-26T01:59:54Z M2.4 build the first real funding UI slice with a funding-only page, live wallet and balance reads, approve + deposit and permit + deposit actions, simulation-before-write, and production app build validation.
 - [ ] M2.5 add event timeline and final runbook
 
 ## Surprises & Discoveries
@@ -28,9 +28,13 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
   funds after revoke.
 - Using the `IPolicyVault` interface artifact for app ABI sync keeps the generated vault ABI tied to
   the public surface and much easier to inspect than the full implementation artifact.
-- An optional `pnpm --filter policyvault-web build` check is still blocked by a pre-existing
-  Next.js TypeScript import-extension error in `app/src/app/layout.tsx`, so M2.3 validation should
-  rely on `pnpm compile` and `pnpm abi:sync` until that separate app build issue is addressed.
+- Next.js production type checking under NodeNext required explicit `.js` relative imports across
+  `app/src`, and the full `pnpm web:build` pass also surfaced two small strict-typing gaps in
+  `app/src/lib/contract-addresses.ts` and `app/src/lib/format.ts` before the funding slice could be
+  considered truly build-valid.
+- On a fresh localhost node under Node.js `25.6.1`, `pnpm deploy:local` hit a Hardhat
+  `compile-cache.json.tmp` rename failure, so live happy-path UI validation still depends on a
+  supported Node 22 LTS setup even though the funding page now renders and degrades cleanly.
 
 ## Decision Log
 
@@ -58,6 +62,14 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - `PolicyVaultAbi` is now generated from the `IPolicyVault` interface artifact, and `MockUSDCAbi`
   is filtered down to the app-used ERC-20 and permit surface so the generated app imports stay
   typed, reviewable, and free of inherited implementation noise.
+- M2.4 intentionally renders only the funding slice on the main page. Policy panels and the event
+  timeline stay hidden until their own submilestones are ready.
+- The funding UI uses one small client container to own the wagmi and viem interaction path, while
+  `WalletState` and `DepositPanel` stay presentational and easy to explain.
+- The approve flow reads live allowance before deciding whether approval is needed, and both funding
+  paths simulate their contract writes immediately before sending them.
+- The permit UI derives the live token name and nonce from the token contract, while keeping the
+  OpenZeppelin permit version `1` as an explicit app-side assumption.
 
 ## Context and Orientation
 
@@ -70,6 +82,8 @@ Relevant files:
 - `app/src/app/*`
 - `app/src/components/*`
 - `app/src/lib/*`
+- `docs/architecture/frontend-data-flow.md`
+- `docs/ops/local-dev.md`
 - `docs/ops/demo-runbook.md`
 
 ## Plan of Work
@@ -148,3 +162,15 @@ consume the generated ABI and address files directly, preferring generated local
 fallbacks so the app and scripts do not drift. `pnpm compile` and `pnpm abi:sync` both completed
 successfully against the current repo state. The exact next submilestone is M2.4 build UI state
 panels.
+
+M2.4 is now complete. The page now renders only the funding slice for this milestone, with a single
+client-side funding container that reads connected wallet state, live `MockUSDC` balances, current
+vault balance, and allowance from the generated ABI and address wiring. `DepositPanel` now drives
+both approve + deposit and permit + deposit flows with live allowance and permit reads, viem
+simulation before each write, wallet signature collection for the permit path, and explicit
+pending, success, and failure copy. `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build` all
+completed successfully. I also loaded the page in a live local browser session and confirmed the UI
+renders a clear disabled status instead of crashing when the localhost RPC or deployed contracts are
+not in a usable state. Manual happy-path wallet validation remains a follow-up on a supported local
+Node 22 LTS setup because a fresh localhost deploy hit a Hardhat cache issue under Node 25.6.1. The
+exact next submilestone is M2.5 add event timeline and final runbook.
