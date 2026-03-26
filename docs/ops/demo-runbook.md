@@ -4,31 +4,44 @@ This is the 5-minute demo sequence for the interview.
 
 ## Goal
 
-Show that the project is a real, bounded on-chain MVP with both contract and TypeScript/UI surfaces.
+Show that the project is a real, bounded on-chain MVP with a clean contract and TypeScript proof path.
 
-## Scripted flow
+## Current proof path
 
 1. Show the repo structure and say why the scope is intentionally narrow.
 2. Show `MockUSDC` and `PolicyVault` in the contract layer.
-3. Run or describe `demo.ts`:
-   - mint local tokens
-   - approve + deposit
-   - create policy
-   - charge within cap
-   - show over-cap or expired revert
-   - revoke policy
-   - withdraw unused funds
-4. Show the UI panels:
-   - wallet token balance
-   - vault balance
-   - deposit path
-   - policy creation
-   - charge / revoke / withdraw
-   - recent event timeline
-5. Close with the security and UX trade-off:
+3. In a second terminal, run `pnpm node`.
+4. In a third terminal, run `pnpm deploy:local` and show the deterministic
+   `deployments/localhost.json` artifact.
+5. Run `pnpm seed:local` and point out the readable starting balances:
+   - owner: `250 mUSDC`
+   - beneficiary: `80 mUSDC`
+   - recovery receiver: `40 mUSDC`
+6. Run `pnpm demo:local` and narrate each validated transition:
+   - approve + deposit `60 mUSDC`
+   - permit + deposit `15 mUSDC`
+   - create a `30 mUSDC` policy
+   - charge `12 mUSDC` within cap
+   - show the intentional over-cap revert as `CapExceeded(...)`
+   - revoke the policy
+   - withdraw the remaining `63 mUSDC` vault balance to the recovery receiver
+7. Close with the security and UX trade-off:
    - bounded delegated spend
    - permit vs approve
    - why on-chain policy state improves clarity
+
+## Important narration note
+
+The policy cap is a spending ceiling, not a separately reserved escrow bucket.
+
+That means the demo should explain withdraw as "the owner recovering the remaining vault balance
+after revoke," not "unlocking escrowed policy funds."
+
+## UI note
+
+The wallet-connected UI spine is the next submilestone.
+
+For the current repo state, the strongest proof path is the validated local script flow, not a UI walkthrough.
 
 ## Best talking points
 
@@ -45,4 +58,4 @@ Always include one explicit failing path:
 - charge after expiry
 - withdraw above available vault balance
 
-A clean revert story makes the demo feel much more credible.
+The current scripted demo uses the over-cap case and prints the custom error cleanly before any bad write is sent.

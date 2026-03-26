@@ -9,7 +9,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 ## Progress
 
 - [x] 2026-03-26T00:15:16Z M2.1 implement permit deposit path with a shared internal deposit helper, focused permit tests, and no public ABI change.
-- [ ] M2.2 wire deploy / seed / demo scripts
+- [x] 2026-03-26T01:23:41Z M2.2 wire localhost deploy / seed / demo scripts with a deterministic deployment artifact, simulate-before-write demo flow, and live validation on a local node.
 - [ ] M2.3 sync ABI into the app
 - [ ] M2.4 build UI state panels
 - [ ] M2.5 add event timeline and final runbook
@@ -20,6 +20,12 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
   typed-data domain from the deployed token instead of guessing from the Solidity contract name.
 - The OpenZeppelin permit failure paths are available for focused test assertions once the contract
   is recompiled with the implemented permit path.
+- Hardhat warns that Node.js `25.6.1` is unsupported, but `pnpm compile`, `pnpm test`,
+  `pnpm deploy:local`, `pnpm seed:local`, and `pnpm demo:local` still completed successfully in
+  live localhost validation.
+- The policy cap is not reserved escrow; it is enforced against the owner's current vault balance
+  at charge time, so the demo and runbook need to narrate withdraw as recovering remaining vault
+  funds after revoke.
 
 ## Decision Log
 
@@ -31,6 +37,13 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
   shared state update, token transfer, and `Deposited` event emission.
 - The public ABI surface stays unchanged for M2.1, so there is no ABI sync or app wiring work in
   this submilestone.
+- M2.2 uses a single human-inspectable `deployments/localhost.json` artifact as the source of
+  truth for local addresses, and explicitly defers ABI sync into the app to M2.3.
+- The seed script tops up the first three localhost wallets to readable demo balances instead of
+  adding reset or burn mechanics to `MockUSDC`.
+- The demo script simulates every state-changing call before sending it and uses an intentional
+  over-cap simulation as the failing path so the revert is visible without broadcasting a known-bad
+  transaction.
 
 ## Context and Orientation
 
@@ -66,6 +79,7 @@ pnpm compile
 pnpm test
 pnpm deploy:local
 pnpm seed:local
+pnpm demo:local
 pnpm abi:sync
 pnpm web:build
 ```
@@ -103,5 +117,11 @@ Any contract interface changes must be reflected in the UI wiring docs and in `s
 
 M2.1 is complete. `depositWithPermit` now works against `MockUSDC` without a prior `approve`
 transaction, emits the same `Deposited` event shape as the classic deposit path, and is covered by
-focused happy-path and failure-path tests for zero amount, expiry, and signature replay. M2.2
-remains next.
+focused happy-path and failure-path tests for zero amount, expiry, and signature replay.
+
+M2.2 is now complete. `deploy.ts` deploys `MockUSDC` and `PolicyVault` on localhost and writes a
+deterministic deployment artifact. `seed.ts` reads that artifact and mints readable demo balances
+to the first three localhost wallets. `demo.ts` reads the same artifact and runs the live
+approve-and-deposit, permit deposit, create policy, charge, over-cap revert, revoke, and withdraw
+flow using simulation before every contract write. The validated next submilestone is M2.3 ABI
+sync into the app.
