@@ -13,6 +13,8 @@ Show that the project is a real, bounded on-chain MVP with a clean contract and 
 3. In a second terminal, run `pnpm node`.
 4. In a third terminal, run `pnpm deploy:local` and show the deterministic
    `deployments/localhost.json` artifact.
+   - if a later `seed:local` or `demo:local` run says the artifact exists but no contract code is
+     present, you restarted localhost on a fresh node and should rerun `pnpm deploy:local`
 5. Run `pnpm seed:local` and point out the readable starting balances:
    - owner: `250 mUSDC`
    - beneficiary: `80 mUSDC`

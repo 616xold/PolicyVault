@@ -3,6 +3,7 @@ import { network } from 'hardhat';
 import {
   LOCALHOST_NETWORK_NAME,
   assertLocalhostChain,
+  assertLocalhostDeploymentHasCode,
   writeLocalhostDeployment,
 } from './helpers/deployments.js';
 import { divider, kv, section } from './helpers/format.js';
@@ -33,13 +34,17 @@ async function main(): Promise<void> {
     client: { public: publicClient, wallet: deployer },
   });
 
-  const deploymentPath = await writeLocalhostDeployment({
+  const deployment = {
     chainId,
     network: LOCALHOST_NETWORK_NAME,
     deployer: deployer.account.address,
     mockUsdc: mockUsdc.address,
     policyVault: policyVault.address,
-  });
+  } as const;
+
+  await assertLocalhostDeploymentHasCode(publicClient, deployment);
+
+  const deploymentPath = await writeLocalhostDeployment(deployment);
 
   kv('MockUSDC', mockUsdc.address);
   kv('PolicyVault', policyVault.address);

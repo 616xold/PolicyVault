@@ -15,6 +15,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T02:12:40Z M3.3 add policy creation and by-id policy view to the UI with controlled inputs, created policy id feedback, on-demand `getPolicy` + `remaining` reads, and 6-decimal `MockUSDC` formatting.
 - [x] 2026-03-26T02:12:40Z M3.4 add charge, revoke, and withdraw UI actions with simulate-before-write viem calls, explicit actor guidance, status clearing, and post-write read refreshes.
 - [x] 2026-03-26T02:23:41Z M3.5 replace the placeholder timeline with direct PolicyVault log reads, deterministic merge-and-sort ordering, post-write refreshes, and a compact demo-readiness / last-action status surface.
+- [x] 2026-03-26T14:40:54Z M2.2 harden localhost scripts so stale `deployments/localhost.json` files fail early on fresh nodes by checking for bytecode at `mockUsdc` and `policyVault` before seed and demo continue.
 
 ## Surprises & Discoveries
 
@@ -28,6 +29,9 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - The policy cap is not reserved escrow; it is enforced against the owner's current vault balance
   at charge time, so the demo and runbook need to narrate withdraw as recovering remaining vault
   funds after revoke.
+- Matching `chainId` and network name are not enough to trust a localhost deployment artifact,
+  because a fresh Hardhat node still reports `31337` while returning no bytecode at stale saved
+  addresses.
 - Using the `IPolicyVault` interface artifact for app ABI sync keeps the generated vault ABI tied to
   the public surface and much easier to inspect than the full implementation artifact.
 - Next.js production type checking under NodeNext required explicit `.js` relative imports across
@@ -67,6 +71,9 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - The demo script simulates every state-changing call before sending it and uses an intentional
   over-cap simulation as the failing path so the revert is visible without broadcasting a known-bad
   transaction.
+- The localhost deployment artifact shape stays unchanged; the hardening stays in one small helper
+  that verifies bytecode exists at `mockUsdc` and `policyVault` before seed or demo use the saved
+  addresses.
 - M2.3 keeps `deployments/localhost.json` as the single source of truth for local addresses, and
   `pnpm abi:sync` now materializes those addresses into `app/src/lib/generated/addresses.ts` so the
   app no longer depends on manual address copy-paste.
@@ -224,3 +231,9 @@ light polling and a manual refresh button, and the card surfaces both contract/d
 the most recent write result so the UI stays narratable during setup or revert cases. `pnpm
 compile`, `pnpm abi:sync`, and `pnpm web:build` completed successfully for this pass. The exact
 next submilestone is M4.1 README polish.
+
+This hardening pass leaves the localhost deployment artifact format and the scripted demo sequence
+unchanged, but makes `seed.ts` and `demo.ts` fail early with a short missing-bytecode message when
+`deployments/localhost.json` points at empty addresses on a fresh localhost node. Live validation
+covered the new failure mode first, then a normal `deploy:local`, `seed:local`, and `demo:local`
+happy path on the same node.

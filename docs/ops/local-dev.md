@@ -61,6 +61,10 @@ address env vars when that deployment artifact is missing.
 - revoke
 - withdraw unused funds
 
+If `deployments/localhost.json` exists but you restarted localhost on a fresh node, `pnpm seed:local`
+and `pnpm demo:local` now fail early with a missing-bytecode message. Re-run `pnpm deploy:local`
+before continuing.
+
 The local UI now reads its ABI and localhost address source of truth from the generated files:
 
 ```bash

@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import type { PublicClient } from 'viem';
 
 export const LOCALHOST_CHAIN_ID = 31337;
 export const LOCALHOST_NETWORK_NAME = 'localhost';
@@ -37,6 +38,30 @@ export function assertLocalhostDeployment(deployment: LocalhostDeployment, chain
   }
 }
 
+export async function assertLocalhostDeploymentHasCode(
+  publicClient: Pick<PublicClient, 'getCode'>,
+  deployment: LocalhostDeployment,
+): Promise<void> {
+  const [mockUsdcCode, policyVaultCode] = await Promise.all([
+    publicClient.getCode({ address: deployment.mockUsdc }),
+    publicClient.getCode({ address: deployment.policyVault }),
+  ]);
+
+  const missingTargets: string[] = [];
+  if (!hasContractCode(mockUsdcCode)) {
+    missingTargets.push(`mockUsdc (${deployment.mockUsdc})`);
+  }
+  if (!hasContractCode(policyVaultCode)) {
+    missingTargets.push(`policyVault (${deployment.policyVault})`);
+  }
+
+  if (missingTargets.length > 0) {
+    throw new Error(
+      `Deployment artifact exists but no contract code is present at ${missingTargets.join(' and ')}. Re-run pnpm deploy:local on a fresh localhost node.`,
+    );
+  }
+}
+
 export async function writeLocalhostDeployment(deployment: LocalhostDeployment): Promise<string> {
   await fs.mkdir(path.dirname(LOCALHOST_DEPLOYMENT_PATH), { recursive: true });
   await fs.writeFile(LOCALHOST_DEPLOYMENT_PATH, JSON.stringify(deployment, null, 2) + '\n', 'utf8');
@@ -57,4 +82,8 @@ export async function readLocalhostDeployment(): Promise<LocalhostDeployment> {
 
     throw error;
   }
+}
+
+function hasContractCode(code: `0x${string}` | undefined): boolean {
+  return code !== undefined && code !== '0x';
 }

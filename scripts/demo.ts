@@ -5,6 +5,7 @@ import {
   LOCALHOST_DEPLOYMENT_PATH,
   assertLocalhostChain,
   assertLocalhostDeployment,
+  assertLocalhostDeploymentHasCode,
   readLocalhostDeployment,
 } from './helpers/deployments.js';
 import { divider, formatToken, kv, section } from './helpers/format.js';
@@ -31,6 +32,7 @@ async function main(): Promise<void> {
 
   const deployment = await readLocalhostDeployment();
   assertLocalhostDeployment(deployment, chainId);
+  await assertLocalhostDeploymentHasCode(publicClient, deployment);
 
   const token = await viem.getContractAt('MockUSDC', deployment.mockUsdc, {
     client: { public: publicClient, wallet: owner },
