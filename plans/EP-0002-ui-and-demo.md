@@ -14,7 +14,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T01:59:54Z M2.4 build the first real funding UI slice with a funding-only page, live wallet and balance reads, approve + deposit and permit + deposit actions, simulation-before-write, and production app build validation.
 - [x] 2026-03-26T02:12:40Z M3.3 add policy creation and by-id policy view to the UI with controlled inputs, created policy id feedback, on-demand `getPolicy` + `remaining` reads, and 6-decimal `MockUSDC` formatting.
 - [x] 2026-03-26T02:12:40Z M3.4 add charge, revoke, and withdraw UI actions with simulate-before-write viem calls, explicit actor guidance, status clearing, and post-write read refreshes.
-- [ ] M3.5 add event timeline and final demo polish
+- [x] 2026-03-26T02:23:41Z M3.5 replace the placeholder timeline with direct PolicyVault log reads, deterministic merge-and-sort ordering, post-write refreshes, and a compact demo-readiness / last-action status surface.
 
 ## Surprises & Discoveries
 
@@ -44,6 +44,11 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
   wallet and vault reads after a successful write.
 - `pnpm web:build` generated `app/next-env.d.ts` in the app workspace, so that file should be
   removed after validation to keep the repo free of generated Next.js artifacts.
+- viem `getLogs` plus a generic event item cast made the generated ABI log args awkward to type in
+  Next.js strict checking, while `getContractEvents` preserved the same direct-ABI read path and
+  kept the event args obvious.
+- For the demo, a small polling loop plus an explicit refresh button is easier to explain than a
+  websocket stream and still keeps the timeline current after local writes.
 
 ## Decision Log
 
@@ -85,6 +90,15 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
   timeline, or indexer before M3.5.
 - The UI keeps charge, revoke, and withdraw buttons visible even for the wrong actor, and relies on
   simulation plus explicit copy to explain owner-only versus beneficiary-only behavior.
+- M3.5 reads the five user-visible PolicyVault events directly from the public client, merges them
+  in one helper under `app/src/lib`, and keeps `EventTimeline` presentation-only so contract log
+  logic does not leak into UI markup.
+- Timeline freshness reuses the existing post-write dashboard refresh seam and adds a light polling
+  fallback plus a manual refresh button, which keeps the demo legible without adding an indexer or
+  websocket dependency.
+- The timeline now carries a compact `Demo ready` / `Missing local deploy` status plus the latest
+  write outcome so the interview flow can explain setup problems or recent success without bouncing
+  between cards.
 
 ## Context and Orientation
 
@@ -200,3 +214,13 @@ withdraw visible with explicit actor guidance, simulates every write before send
 panel status state on demand. `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build` all completed
 successfully after the dashboard wiring landed. The exact next submilestone is M3.5 add event
 timeline and final demo polish.
+
+M3.5 is now complete. `EventTimeline` no longer shows placeholders: it reads recent `Deposited`,
+`PolicyCreated`, `Charged`, `PolicyRevoked`, and `Withdrawn` logs directly from the configured
+PolicyVault address, merges them into one deterministic recent-events slice, and renders
+human-readable rows with timestamps, block numbers, and short transaction references. The existing
+dashboard refresh seam now refreshes the timeline after successful writes, the timeline also offers
+light polling and a manual refresh button, and the card surfaces both contract/demo readiness and
+the most recent write result so the UI stays narratable during setup or revert cases. `pnpm
+compile`, `pnpm abi:sync`, and `pnpm web:build` completed successfully for this pass. The exact
+next submilestone is M4.1 README polish.

@@ -37,9 +37,9 @@ The policy cap is a spending ceiling, not a separately reserved escrow bucket.
 That means the demo should explain withdraw as "the owner recovering the remaining vault balance
 after revoke," not "unlocking escrowed policy funds."
 
-## UI note
+## UI walkthrough
 
-The UI now supports the full policy/action slice short of the event timeline:
+The UI now supports the full narratable flow, including the recent-event timeline:
 
 - connected wallet state
 - wallet balance, vault balance, and allowance
@@ -51,23 +51,32 @@ The UI now supports the full policy/action slice short of the event timeline:
 - charge
 - revoke
 - withdraw
+- recent `Deposited`, `PolicyCreated`, `Charged`, `PolicyRevoked`, and `Withdrawn` rows from
+  PolicyVault logs
+- a small status surface showing whether the local deploy is ready and what the last write did
 
 Use it as an optional companion after `pnpm web:dev`:
 
 1. connect the owner wallet
-2. fund the vault
-3. create a policy and copy the created policy id
-4. load that policy id to show owner, beneficiary, cap, spent, remaining, expiry, and revoked
+2. confirm the timeline card says `Demo ready`; if it says `Missing local deploy`, run
+   `pnpm deploy:local` and `pnpm abi:sync`; if it says `RPC offline`, start `pnpm node`
+3. fund the vault and point out that the timeline refreshes after the deposit receipt lands
+4. create a policy, copy the created policy id, and show the matching `PolicyCreated` row
+5. load that policy id to show owner, beneficiary, cap, spent, remaining, expiry, and revoked
    state
-5. switch to the beneficiary wallet to charge
-6. switch back to the owner wallet to revoke and withdraw
+6. switch to the beneficiary wallet to charge and call out the `Charged` row with spent and
+   remaining values
+7. switch back to the owner wallet to revoke and withdraw, then show the final revoke and withdraw
+   rows together
+8. use the manual `Refresh timeline` button only if you want to prove the log reads are direct and
+   not backed by an indexer
 
 If you want one clear UI-side revert, either try an over-cap charge or click an owner-only or
 beneficiary-only action from the wrong wallet. The buttons stay visible on purpose so the contract
 result can be narrated directly.
 
-The event timeline is still deferred, so the scripted demo remains the primary proof path for full
-event narration.
+The scripted demo remains the fastest proof path, but the UI can now narrate the same lifecycle
+with readable event rows instead of raw log data.
 
 ## Best talking points
 

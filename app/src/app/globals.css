@@ -112,6 +112,16 @@ main {
   color: #b8ddff;
 }
 
+.status-warning {
+  border-color: rgba(255, 194, 102, 0.42);
+  color: #ffd595;
+}
+
+.status-error {
+  border-color: rgba(232, 93, 117, 0.42);
+  color: #ffb0ba;
+}
+
 .status-muted {
   color: var(--muted);
 }
@@ -131,9 +141,40 @@ main {
   gap: 12px;
 }
 
+.timeline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .timeline-item {
   border-left: 2px solid var(--border);
   padding-left: 12px;
+}
+
+.timeline-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.timeline-summary {
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.timeline-meta {
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.timeline-status-copy {
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .button-row {

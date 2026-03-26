@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { zeroAddress, type Hex } from 'viem';
 import {
   useAccount,
@@ -14,8 +14,14 @@ import {
 
 import { ChargePanel } from './charge-panel.js';
 import { DepositPanel } from './deposit-panel.js';
+import { EventTimeline } from './event-timeline.js';
 import { PolicyPanel } from './policy-panel.js';
 import { WalletState } from './wallet-state.js';
+import {
+  fetchPolicyVaultTimeline,
+  type TimelineEntry,
+  type TimelineLoadState,
+} from '../lib/events.js';
 import {
   buildPermitDomain,
   fundingTokenDefaults,
@@ -49,6 +55,17 @@ function describeAddressSource() {
   }
 }
 
+type LastActionState = {
+  message: string;
+  tone: 'live' | 'muted' | 'warning' | 'error';
+};
+
+const initialTimelineState: TimelineLoadState = {
+  phase: 'idle',
+  message:
+    'Timeline will read recent PolicyVault logs directly from the configured public client.',
+};
+
 export function VaultDashboard() {
   const [depositAmount, setDepositAmount] = useState('');
   const [fundingActionState, setFundingActionState] = useState<FundingActionState>({
@@ -73,6 +90,13 @@ export function VaultDashboard() {
   const [policyActionState, setPolicyActionState] = useState<PolicyWriteState>({
     phase: 'idle',
   });
+  const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
+  const [timelineState, setTimelineState] = useState<TimelineLoadState>(initialTimelineState);
+  const [lastActionState, setLastActionState] = useState<LastActionState>({
+    message: 'No confirmed write yet.',
+    tone: 'muted',
+  });
+  const timelineRequestIdRef = useRef(0);
 
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
@@ -198,6 +222,66 @@ export function VaultDashboard() {
       ? allowance >= parsedDepositAmount
       : undefined;
 
+  async function refreshEventTimeline(options?: { showLoading?: boolean }) {
+    const requestId = ++timelineRequestIdRef.current;
+    const showLoading = options?.showLoading ?? true;
+
+    if (!contractConfig.hasConfiguredAddresses) {
+      setTimelineEntries([]);
+      setTimelineState({
+        phase: 'idle',
+        message: 'Run pnpm deploy:local and pnpm abi:sync first so the UI knows which PolicyVault to read.',
+      });
+      return;
+    }
+
+    if (!publicClient) {
+      setTimelineEntries([]);
+      setTimelineState({
+        phase: 'idle',
+        message: 'Start pnpm node so the dashboard can read recent PolicyVault logs.',
+      });
+      return;
+    }
+
+    if (showLoading) {
+      setTimelineState({
+        phase: 'loading',
+        message: 'Refreshing recent PolicyVault events.',
+      });
+    }
+
+    try {
+      const nextEntries = await fetchPolicyVaultTimeline(publicClient, {
+        address: policyVaultContract.address,
+        tokenDecimals,
+        tokenSymbol,
+      });
+
+      if (requestId !== timelineRequestIdRef.current) {
+        return;
+      }
+
+      setTimelineEntries(nextEntries);
+      setTimelineState({
+        phase: 'success',
+        message:
+          nextEntries.length > 0
+            ? `Showing the ${nextEntries.length} most recent PolicyVault events in chain order.`
+            : 'No PolicyVault events yet. Deposit or create a policy to start the story.',
+      });
+    } catch (error) {
+      if (requestId !== timelineRequestIdRef.current) {
+        return;
+      }
+
+      setTimelineState({
+        phase: 'error',
+        message: `Event reads failed: ${getActionErrorMessage(error)}`,
+      });
+    }
+  }
+
   async function refreshFundingReads() {
     await tokenMetadata.refetch();
 
@@ -277,7 +361,12 @@ export function VaultDashboard() {
   }
 
   async function refreshDashboardReads(policyId?: Hex) {
-    await refreshFundingReads();
+    await Promise.all([
+      refreshFundingReads(),
+      refreshEventTimeline({
+        showLoading: false,
+      }),
+    ]);
 
     const policyToRefresh = policyId ?? loadedPolicyId;
     if (policyToRefresh) {
@@ -287,6 +376,22 @@ export function VaultDashboard() {
       });
     }
   }
+
+  useEffect(() => {
+    void refreshEventTimeline();
+
+    if (!contractConfig.hasConfiguredAddresses || !publicClient) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => {
+      void refreshEventTimeline({
+        showLoading: false,
+      });
+    }, 15_000);
+
+    return () => window.clearInterval(intervalId);
+  }, [publicClient, tokenDecimals, tokenSymbol]);
 
   async function handleConnect() {
     if (!selectedConnector) return;
@@ -379,6 +484,17 @@ export function VaultDashboard() {
     };
   }
 
+  function recordLastAction(
+    tone: LastActionState['tone'],
+    message: string,
+    txHash?: `0x${string}`,
+  ) {
+    setLastActionState({
+      message: txHash ? `${message} Tx ${shortAddress(txHash)}.` : message,
+      tone,
+    });
+  }
+
   async function handleApproveDeposit() {
     resetFundingActionState();
 
@@ -452,13 +568,20 @@ export function VaultDashboard() {
         message: approvalWasSent ? 'Approval and deposit confirmed.' : 'Deposit confirmed.',
         txHash: depositHash,
       });
+      recordLastAction(
+        'live',
+        approvalWasSent ? 'Approval and deposit confirmed.' : 'Deposit confirmed.',
+        depositHash,
+      );
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
+      const message = getActionErrorMessage(error);
       setFundingActionState({
         phase: 'error',
         mode: 'approve',
-        message: getActionErrorMessage(error),
+        message,
       });
+      recordLastAction('error', message);
     }
   }
 
@@ -537,13 +660,16 @@ export function VaultDashboard() {
         message: 'Permit deposit confirmed.',
         txHash: depositHash,
       });
+      recordLastAction('live', 'Permit deposit confirmed.', depositHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
+      const message = getActionErrorMessage(error);
       setFundingActionState({
         phase: 'error',
         mode: 'permit',
-        message: getActionErrorMessage(error),
+        message,
       });
+      recordLastAction('error', message);
     }
   }
 
@@ -592,13 +718,16 @@ export function VaultDashboard() {
         message: 'Policy created and loaded.',
         txHash: createHash,
       });
+      recordLastAction('live', 'Policy created and loaded.', createHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
+      const message = getActionErrorMessage(error);
       setCreatePolicyState({
         phase: 'error',
         action: 'create',
-        message: getActionErrorMessage(error),
+        message,
       });
+      recordLastAction('error', message);
     }
   }
 
@@ -645,13 +774,16 @@ export function VaultDashboard() {
         message: 'Charge confirmed and policy refreshed.',
         txHash: chargeHash,
       });
+      recordLastAction('live', 'Charge confirmed and policy refreshed.', chargeHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
+      const message = getActionErrorMessage(error);
       setPolicyActionState({
         phase: 'error',
         action: 'charge',
-        message: getActionErrorMessage(error),
+        message,
       });
+      recordLastAction('error', message);
     }
   }
 
@@ -693,13 +825,16 @@ export function VaultDashboard() {
         message: 'Policy revoked and refreshed.',
         txHash: revokeHash,
       });
+      recordLastAction('live', 'Policy revoked and refreshed.', revokeHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
+      const message = getActionErrorMessage(error);
       setPolicyActionState({
         phase: 'error',
         action: 'revoke',
-        message: getActionErrorMessage(error),
+        message,
       });
+      recordLastAction('error', message);
     }
   }
 
@@ -741,13 +876,16 @@ export function VaultDashboard() {
         message: 'Withdraw confirmed.',
         txHash: withdrawHash,
       });
+      recordLastAction('live', 'Withdraw confirmed.', withdrawHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
+      const message = getActionErrorMessage(error);
       setPolicyActionState({
         phase: 'error',
         action: 'withdraw',
-        message: getActionErrorMessage(error),
+        message,
       });
+      recordLastAction('error', message);
     }
   }
 
@@ -770,8 +908,26 @@ export function VaultDashboard() {
         : !isExpectedChain
           ? `Switch the wallet to localhost (${contractConfig.chainId}) to read the local vault state.`
           : accountReads.error
-            ? `Funding reads failed: ${getActionErrorMessage(accountReads.error)}`
-            : `${describeAddressSource()} Vault ${shortAddress(policyVaultContract.address)}.`;
+          ? `Funding reads failed: ${getActionErrorMessage(accountReads.error)}`
+          : `${describeAddressSource()} Vault ${shortAddress(policyVaultContract.address)}.`;
+
+  const timelineContractStatus = !contractConfig.hasConfiguredAddresses
+    ? {
+        detail: 'The UI is missing a synced localhost deploy, so recent PolicyVault logs cannot be read yet.',
+        label: 'Missing local deploy',
+        tone: 'warning' as const,
+      }
+    : !publicClient
+      ? {
+          detail: 'The contract addresses are configured, but the local RPC is offline. Start pnpm node to read logs.',
+          label: 'RPC offline',
+          tone: 'warning' as const,
+        }
+      : {
+          detail: `${describeAddressSource()} Recent events are read directly from PolicyVault without an indexer.`,
+          label: 'Demo ready',
+          tone: 'live' as const,
+        };
 
   const allowanceHint = depositAmountError
     ? depositAmountError
@@ -876,6 +1032,19 @@ export function VaultDashboard() {
             : ''
         }
         withdrawReceiver={withdrawReceiver}
+      />
+
+      <EventTimeline
+        contractStatusDetail={timelineContractStatus.detail}
+        contractStatusLabel={timelineContractStatus.label}
+        contractStatusTone={timelineContractStatus.tone}
+        entries={timelineEntries}
+        lastActionLabel={lastActionState.message}
+        lastActionTone={lastActionState.tone}
+        loadState={timelineState}
+        onRefresh={() => {
+          void refreshEventTimeline();
+        }}
       />
     </>
   );

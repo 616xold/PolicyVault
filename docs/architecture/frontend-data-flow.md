@@ -4,7 +4,7 @@ The UI exists to make the contract state legible.
 
 ## Current dashboard slice
 
-The current UI renders one small dashboard with four cards:
+The current UI renders one small dashboard with five cards:
 
 - wallet connection and balance state
 - approve + deposit
@@ -14,8 +14,7 @@ The current UI renders one small dashboard with four cards:
 - charge
 - revoke
 - withdraw
-
-The event timeline is still intentionally deferred until the next UI submilestone.
+- recent PolicyVault event timeline with contract/demo status copy
 
 ## Reads
 
@@ -29,6 +28,9 @@ The event timeline is still intentionally deferred until the next UI submileston
 - next permit nonce for the connected owner
 - on-demand `getPolicy(policyId)`
 - on-demand `remaining(policyId)`
+- recent `Deposited`, `PolicyCreated`, `Charged`, `PolicyRevoked`, and `Withdrawn` logs from the
+  configured PolicyVault address
+- block timestamps for the visible timeline slice
 
 ## Writes
 
@@ -53,7 +55,7 @@ For the classic deposit path:
 4. wait for the approval receipt if it was needed
 5. simulate `deposit`
 6. submit the deposit transaction
-7. wait for receipt and refresh balance, allowance, and vault reads
+7. wait for receipt and refresh balance, allowance, vault, and timeline reads
 
 For the permit path:
 
@@ -63,7 +65,7 @@ For the permit path:
 4. ask the wallet to sign typed data
 5. simulate `depositWithPermit`
 6. submit the deposit transaction
-7. wait for receipt and refresh balance, allowance, vault balance, and nonce reads
+7. wait for receipt and refresh balance, allowance, vault balance, nonce, and timeline reads
 
 For policy creation:
 
@@ -72,7 +74,7 @@ For policy creation:
 3. submit the transaction
 4. wait for receipt
 5. use the simulated return value as the created policy id shown in the UI
-6. refresh wallet reads and load the created policy by id
+6. refresh wallet reads, refresh the timeline, and load the created policy by id
 
 For policy lookup:
 
@@ -86,7 +88,7 @@ For charge and revoke:
 2. simulate the contract write
 3. submit the transaction
 4. wait for receipt
-5. refresh wallet reads and reload the same policy id
+5. refresh wallet reads, refresh the timeline, and reload the same policy id
 
 For withdraw:
 
@@ -94,13 +96,23 @@ For withdraw:
 2. parse the receiver address
 3. simulate `withdraw`
 4. submit the transaction
-5. wait for receipt and refresh wallet reads
+5. wait for receipt and refresh wallet reads plus the timeline
+
+For the event timeline:
+
+1. read recent PolicyVault events directly from the configured public client
+2. query only the five user-visible event types needed for the demo
+3. merge them into one list and sort deterministically by block number, transaction index, and log
+   index
+4. fetch block timestamps only for the visible slice
+5. render a concise human-readable row instead of raw JSON
+6. refresh after successful writes, poll lightly, and keep a manual refresh button for demo use
 
 The UI keeps owner-only and beneficiary-only actions visible. If the connected wallet is the wrong
 actor for a button, the simulation error is surfaced in the panel copy instead of hiding the action.
 
 If the generated addresses are placeholders, the local RPC is down, or the wallet is on the wrong
-chain, the UI should disable writes, keep policy lookup status explicit, and show a short status
-instead of crashing.
+chain, the UI should disable writes, keep policy lookup status explicit, show the timeline contract
+status, and avoid crashing.
 
 The UI should help explain the system, not hide it.

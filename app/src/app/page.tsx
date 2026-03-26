@@ -18,8 +18,9 @@ export default function Page() {
       </div>
 
       <p className="note section-note">
-        Policy ids are the primary lookup key in this MVP. The event timeline is still intentionally
-        deferred to the next UI submilestone.
+        Policy ids stay intentionally manual in this MVP, and the recent-event timeline helps
+        narrate the latest deposit, policy, charge, revoke, and withdraw transitions without adding
+        an indexer.
       </p>
     </main>
   );
