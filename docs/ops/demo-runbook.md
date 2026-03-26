@@ -61,7 +61,9 @@ Use it as an optional companion after `pnpm web:dev`:
 
 1. connect the owner wallet
 2. confirm the timeline card says `Demo ready`; if it says `Missing local deploy`, run
-   `pnpm deploy:local` and `pnpm abi:sync`; if it says `RPC offline`, start `pnpm node`
+   `pnpm deploy:local` and `pnpm abi:sync`; if it says `RPC offline`, start `pnpm node`; if it
+   says `No contract code`, you restarted localhost on a fresh node and should rerun
+   `pnpm deploy:local` and `pnpm abi:sync`
 3. fund the vault and point out that the timeline refreshes after the deposit receipt lands
 4. create a policy, copy the created policy id, and show the matching `PolicyCreated` row
 5. load that policy id to show owner, beneficiary, cap, spent, remaining, expiry, and revoked

@@ -18,6 +18,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T14:40:54Z M2.2 harden localhost scripts so stale `deployments/localhost.json` files fail early on fresh nodes by checking for bytecode at `mockUsdc` and `policyVault` before seed and demo continue.
 - [x] 2026-03-26T14:46:12Z M2.3 harden env docs and fallback parsing so generated localhost addresses remain the obvious source of truth, env fallback comments match the real precedence order, and invalid `NEXT_PUBLIC_CHAIN_ID` values fall back cleanly instead of leaking `NaN`.
 - [x] 2026-03-26T14:52:49Z M3.2 cleanup remove the stale funding-only container residue, confirm `VaultDashboard` is the only active runtime container path, and clear leftover plan references to the dead file.
+- [x] 2026-03-26T15:03:35Z M3 hardening add a lightweight live bytecode probe so the dashboard distinguishes missing addresses, RPC outage, configured-but-empty contract addresses, and ready; sync the local UI docs; and keep `app/next-env.d.ts` as tracked app scaffold.
 
 ## Surprises & Discoveries
 
@@ -62,6 +63,9 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - After the dashboard migration and timeline work, the old funding-only container file was still
   sitting in the workspace even though runtime had already moved entirely to `VaultDashboard`, and
   two stale plan references were still pointing at that dead file.
+- On this Next.js version, `pnpm web:build` restores the `import "./.next/types/routes.d.ts";`
+  line in `app/next-env.d.ts`, so the stable repo policy is to keep that file tracked and stop
+  deleting it after builds instead of fighting the generator.
 
 ## Decision Log
 
@@ -121,6 +125,11 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - Repo hygiene cleanup should keep only one active dashboard container path. The stale funding-only
   container file is deleted instead of being retained as dead workspace residue once
   `VaultDashboard` owns the runtime path.
+- This dashboard hardening pass keeps the write flows and panel ownership unchanged. It adds one
+  small `getCode`-based readiness probe ahead of app reads so `Demo ready` only appears when both
+  configured addresses actually have deployed bytecode on the current node.
+- `app/next-env.d.ts` is now treated as intentional tracked app scaffold. We no longer remove it
+  after builds, and repo hygiene should focus on real generated directories like `.next` instead.
 
 ## Context and Orientation
 
@@ -266,3 +275,14 @@ This M3.2 cleanup pass makes no runtime behavior change. `page.tsx` already moun
 active owner, and the repo search now comes back clean once the dead file and stale plan
 references are removed. The exact next hardening target is keeping the dashboard docs and
 validation notes aligned as future UI polish lands.
+
+This dashboard hardening pass makes the setup state truthful without changing contract or write
+behavior. `VaultDashboard` now runs one lightweight live bytecode probe through the public client
+before enabling contract reads or showing `Demo ready`, so the app can distinguish missing
+configured addresses, RPC outage, configured-but-empty contract addresses on a fresh localhost
+node, and ready. `docs/ops/local-dev.md`, `docs/ops/demo-runbook.md`, and
+`docs/architecture/frontend-data-flow.md` now match the real current UI scope, and
+`app/next-env.d.ts` is intentionally kept as a tracked app scaffold file rather than being deleted
+after builds. `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build` passed; live validation also
+confirmed the new probe reports `missing-bytecode` on a fresh node before deploy and `ready` after
+`pnpm deploy:local`.

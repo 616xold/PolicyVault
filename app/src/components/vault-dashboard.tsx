@@ -18,6 +18,11 @@ import { EventTimeline } from './event-timeline.js';
 import { PolicyPanel } from './policy-panel.js';
 import { WalletState } from './wallet-state.js';
 import {
+  probeContractReadiness,
+  type ContractReadinessState,
+  type MissingContractCodeTarget,
+} from '../lib/contract-readiness.js';
+import {
   fetchPolicyVaultTimeline,
   type TimelineEntry,
   type TimelineLoadState,
@@ -53,6 +58,30 @@ function describeAddressSource() {
     default:
       return 'No synced contract addresses yet.';
   }
+}
+
+function describeMissingContracts(missingContracts: MissingContractCodeTarget[]) {
+  if (missingContracts.length === 0) {
+    return 'MockUSDC and PolicyVault';
+  }
+
+  if (missingContracts.length === 1) {
+    return missingContracts[0];
+  }
+
+  return `${missingContracts.slice(0, -1).join(', ')} and ${missingContracts.at(-1)}`;
+}
+
+function initialContractReadiness(): ContractReadinessState {
+  if (!contractConfig.hasConfiguredAddresses) {
+    return {
+      kind: 'missing-addresses',
+    };
+  }
+
+  return {
+    kind: 'checking-contracts',
+  };
 }
 
 type LastActionState = {
@@ -96,6 +125,9 @@ export function VaultDashboard() {
     message: 'No confirmed write yet.',
     tone: 'muted',
   });
+  const [contractReadiness, setContractReadiness] =
+    useState<ContractReadinessState>(initialContractReadiness);
+  const readinessRequestIdRef = useRef(0);
   const timelineRequestIdRef = useRef(0);
 
   const { address, isConnected } = useAccount();
@@ -122,7 +154,7 @@ export function VaultDashboard() {
       { ...mockUsdcContract, functionName: 'decimals' },
     ],
     query: {
-      enabled: contractConfig.hasConfiguredAddresses,
+      enabled: contractReadiness.kind === 'ready',
     },
   });
 
@@ -140,12 +172,47 @@ export function VaultDashboard() {
     ],
     query: {
       enabled:
-        contractConfig.hasConfiguredAddresses &&
+        contractReadiness.kind === 'ready' &&
         Boolean(address) &&
         isExpectedChain &&
         Boolean(publicClient),
     },
   });
+
+  useEffect(() => {
+    const requestId = ++readinessRequestIdRef.current;
+
+    if (!contractConfig.hasConfiguredAddresses) {
+      setContractReadiness({
+        kind: 'missing-addresses',
+      });
+      return;
+    }
+
+    if (!publicClient) {
+      setContractReadiness({
+        kind: 'rpc-unavailable',
+      });
+      return;
+    }
+
+    setContractReadiness({
+      kind: 'checking-contracts',
+    });
+
+    void (async () => {
+      const nextReadiness = await probeContractReadiness(publicClient, {
+        mockUsdcAddress: mockUsdcContract.address,
+        policyVaultAddress: policyVaultContract.address,
+      });
+
+      if (requestId !== readinessRequestIdRef.current) {
+        return;
+      }
+
+      setContractReadiness(nextReadiness);
+    })();
+  }, [publicClient]);
 
   const tokenName = tokenMetadata.data?.[0] ?? fundingTokenDefaults.name;
   const tokenSymbol = tokenMetadata.data?.[1] ?? fundingTokenDefaults.symbol;
@@ -195,17 +262,22 @@ export function VaultDashboard() {
     parsedWithdrawAmount = undefined;
   }
 
-  const readDisabledReason = !contractConfig.hasConfiguredAddresses
-    ? 'Run pnpm deploy:local and pnpm abi:sync first.'
-    : !publicClient
-      ? 'Start the local RPC with pnpm node.'
-      : undefined;
+  const readinessBlocker =
+    contractReadiness.kind === 'missing-addresses'
+      ? 'Run pnpm deploy:local and pnpm abi:sync first.'
+      : contractReadiness.kind === 'rpc-unavailable'
+        ? 'Start the local RPC with pnpm node.'
+        : contractReadiness.kind === 'checking-contracts'
+          ? 'Checking deployed contract bytecode at the configured addresses.'
+          : contractReadiness.kind === 'missing-bytecode'
+            ? `Configured addresses were found, but no bytecode is deployed at ${describeMissingContracts(contractReadiness.missingContracts)}. Re-run pnpm deploy:local and pnpm abi:sync on this node.`
+            : undefined;
 
-  const writeDisabledReason = !contractConfig.hasConfiguredAddresses
-    ? 'Run pnpm deploy:local and pnpm abi:sync first.'
-    : !publicClient
-      ? 'Start the local RPC with pnpm node.'
-      : !isConnected
+  const readDisabledReason = readinessBlocker;
+
+  const writeDisabledReason = readinessBlocker
+    ? readinessBlocker
+    : !isConnected
         ? 'Connect a wallet to send PolicyVault writes.'
         : !isExpectedChain
           ? `Switch the wallet to localhost (${contractConfig.chainId}).`
@@ -226,16 +298,24 @@ export function VaultDashboard() {
     const requestId = ++timelineRequestIdRef.current;
     const showLoading = options?.showLoading ?? true;
 
-    if (!contractConfig.hasConfiguredAddresses) {
+    if (contractReadiness.kind !== 'ready') {
       setTimelineEntries([]);
       setTimelineState({
         phase: 'idle',
-        message: 'Run pnpm deploy:local and pnpm abi:sync first so the UI knows which PolicyVault to read.',
+        message:
+          contractReadiness.kind === 'missing-addresses'
+            ? 'Run pnpm deploy:local and pnpm abi:sync first so the UI knows which PolicyVault to read.'
+            : contractReadiness.kind === 'rpc-unavailable'
+              ? 'Start pnpm node so the dashboard can read recent PolicyVault logs.'
+              : contractReadiness.kind === 'checking-contracts'
+                ? 'Checking deployed contract bytecode before reading recent PolicyVault logs.'
+                : `Configured addresses were found, but no bytecode is deployed at ${describeMissingContracts(contractReadiness.missingContracts)}.`,
       });
       return;
     }
 
-    if (!publicClient) {
+    const reader = publicClient;
+    if (!reader) {
       setTimelineEntries([]);
       setTimelineState({
         phase: 'idle',
@@ -252,7 +332,7 @@ export function VaultDashboard() {
     }
 
     try {
-      const nextEntries = await fetchPolicyVaultTimeline(publicClient, {
+      const nextEntries = await fetchPolicyVaultTimeline(reader, {
         address: policyVaultContract.address,
         tokenDecimals,
         tokenSymbol,
@@ -380,7 +460,7 @@ export function VaultDashboard() {
   useEffect(() => {
     void refreshEventTimeline();
 
-    if (!contractConfig.hasConfiguredAddresses || !publicClient) {
+    if (contractReadiness.kind !== 'ready' || !publicClient) {
       return undefined;
     }
 
@@ -391,7 +471,7 @@ export function VaultDashboard() {
     }, 15_000);
 
     return () => window.clearInterval(intervalId);
-  }, [publicClient, tokenDecimals, tokenSymbol]);
+  }, [contractReadiness.kind, publicClient, tokenDecimals, tokenSymbol]);
 
   async function handleConnect() {
     if (!selectedConnector) return;
@@ -899,11 +979,15 @@ export function VaultDashboard() {
           ? 'Disconnected'
           : 'No wallet';
 
-  const walletStateNote = !contractConfig.hasConfiguredAddresses
+  const walletStateNote = contractReadiness.kind === 'missing-addresses'
     ? 'Run pnpm deploy:local and pnpm abi:sync to materialize the local contract addresses before using the dashboard.'
-    : !publicClient
-      ? 'The local JSON-RPC client is unavailable. Start pnpm node before testing the funding and policy flows.'
-      : !isConnected
+    : contractReadiness.kind === 'rpc-unavailable'
+      ? 'The local JSON-RPC client is unavailable or not responding. Start pnpm node before testing the dashboard.'
+      : contractReadiness.kind === 'checking-contracts'
+        ? 'Configured addresses found. Checking whether MockUSDC and PolicyVault bytecode is deployed on this node.'
+        : contractReadiness.kind === 'missing-bytecode'
+          ? `Configured addresses exist, but ${describeMissingContracts(contractReadiness.missingContracts)} has no deployed bytecode on this node. Re-run pnpm deploy:local and pnpm abi:sync before using the dashboard.`
+          : !isConnected
         ? 'Connect the owner or beneficiary wallet to read balances, fund the vault, and send policy actions.'
         : !isExpectedChain
           ? `Switch the wallet to localhost (${contractConfig.chainId}) to read the local vault state.`
@@ -911,19 +995,31 @@ export function VaultDashboard() {
           ? `Funding reads failed: ${getActionErrorMessage(accountReads.error)}`
           : `${describeAddressSource()} Vault ${shortAddress(policyVaultContract.address)}.`;
 
-  const timelineContractStatus = !contractConfig.hasConfiguredAddresses
+  const timelineContractStatus = contractReadiness.kind === 'missing-addresses'
     ? {
         detail: 'The UI is missing a synced localhost deploy, so recent PolicyVault logs cannot be read yet.',
         label: 'Missing local deploy',
         tone: 'warning' as const,
       }
-    : !publicClient
+    : contractReadiness.kind === 'rpc-unavailable'
       ? {
-          detail: 'The contract addresses are configured, but the local RPC is offline. Start pnpm node to read logs.',
+          detail: 'The contract addresses are configured, but the local RPC is offline or not responding. Start pnpm node to read logs.',
           label: 'RPC offline',
           tone: 'warning' as const,
         }
-      : {
+      : contractReadiness.kind === 'checking-contracts'
+        ? {
+            detail: 'Configured addresses were found. The dashboard is checking that MockUSDC and PolicyVault bytecode is actually deployed on this node.',
+            label: 'Checking contracts',
+            tone: 'muted' as const,
+          }
+        : contractReadiness.kind === 'missing-bytecode'
+          ? {
+              detail: `${describeMissingContracts(contractReadiness.missingContracts)} has no deployed bytecode at the configured address on this node. Re-run pnpm deploy:local and pnpm abi:sync.`,
+              label: 'No contract code',
+              tone: 'warning' as const,
+            }
+          : {
           detail: `${describeAddressSource()} Recent events are read directly from PolicyVault without an indexer.`,
           label: 'Demo ready',
           tone: 'live' as const,

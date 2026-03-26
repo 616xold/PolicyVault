@@ -19,6 +19,7 @@ The current UI renders one small dashboard with five cards:
 ## Reads
 
 - generated address availability
+- lightweight `getCode` probe against the configured `MockUSDC` and `PolicyVault` addresses
 - connected account
 - connected chain
 - token name, symbol, and decimals
@@ -46,6 +47,13 @@ The current UI renders one small dashboard with five cards:
 
 The dashboard container owns the wallet and chain logic so the visible panels can stay
 presentation-first.
+
+Before enabling contract reads or writes, the dashboard first proves four setup states:
+
+1. no configured addresses
+2. no usable RPC / public client
+3. configured addresses present but missing deployed bytecode at `MockUSDC` and/or `PolicyVault`
+4. ready
 
 For the classic deposit path:
 
@@ -112,7 +120,8 @@ The UI keeps owner-only and beneficiary-only actions visible. If the connected w
 actor for a button, the simulation error is surfaced in the panel copy instead of hiding the action.
 
 If the generated addresses are placeholders, the local RPC is down, or the wallet is on the wrong
-chain, the UI should disable writes, keep policy lookup status explicit, show the timeline contract
-status, and avoid crashing.
+chain, or the configured addresses point at empty contracts on a fresh localhost node, the UI
+should disable writes, keep policy lookup status explicit, show the timeline contract status, and
+avoid crashing.
 
 The UI should help explain the system, not hide it.

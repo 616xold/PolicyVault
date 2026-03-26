@@ -82,13 +82,38 @@ The current UI scope is intentionally narrow:
 - wallet connection and funding state
 - approve + deposit
 - permit + deposit
+- create policy
+- load policy by id
+- charge
+- revoke
+- withdraw
+- recent event timeline
 
-Policy creation, charge, revoke, withdraw, and the event timeline are still deferred.
+The dashboard now covers the full MVP narration path in one place:
+
+- wallet state
+- approve + deposit
+- permit + deposit
+- create policy
+- load policy by id
+- charge
+- revoke
+- withdraw
+- recent `Deposited`, `PolicyCreated`, `Charged`, `PolicyRevoked`, and `Withdrawn` rows
+
+Readiness is intentionally explicit before the dashboard claims it is usable:
+
+- `Missing local deploy`: run `pnpm deploy:local` and `pnpm abi:sync`
+- `RPC offline`: start `pnpm node`
+- `No contract code`: localhost restarted and the saved addresses point at empty contracts, so rerun
+  `pnpm deploy:local` and `pnpm abi:sync`
+- `Demo ready`: the local RPC is answering and both configured addresses have deployed bytecode
 
 If the generated addresses are placeholders, the local RPC is down, or the wallet is on the wrong
-chain, the funding controls stay disabled and the page shows a short status instead of crashing.
+chain, or the configured addresses have no deployed bytecode on the current node, the dashboard
+keeps reads and writes disabled and shows a short truthful status instead of crashing.
 
-For a manual happy-path funding check in the browser:
+For a manual happy-path dashboard check in the browser:
 
 1. run `pnpm node`
 2. run `pnpm deploy:local`
@@ -96,7 +121,11 @@ For a manual happy-path funding check in the browser:
 4. run `pnpm seed:local`
 5. run `pnpm web:dev`
 6. connect localhost account `#0` in the wallet extension
-7. deposit through either the approve or permit path and confirm the balances refresh after receipt
+7. confirm the timeline card says `Demo ready`
+8. fund the vault through either the approve or permit path and confirm the balances refresh after
+   receipt
+9. create a policy, load it by id, then switch wallets to charge, revoke, and withdraw while the
+   timeline updates
 
 ## Recommended wallet setup
 
