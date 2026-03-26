@@ -16,6 +16,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T02:12:40Z M3.4 add charge, revoke, and withdraw UI actions with simulate-before-write viem calls, explicit actor guidance, status clearing, and post-write read refreshes.
 - [x] 2026-03-26T02:23:41Z M3.5 replace the placeholder timeline with direct PolicyVault log reads, deterministic merge-and-sort ordering, post-write refreshes, and a compact demo-readiness / last-action status surface.
 - [x] 2026-03-26T14:40:54Z M2.2 harden localhost scripts so stale `deployments/localhost.json` files fail early on fresh nodes by checking for bytecode at `mockUsdc` and `policyVault` before seed and demo continue.
+- [x] 2026-03-26T14:46:12Z M2.3 harden env docs and fallback parsing so generated localhost addresses remain the obvious source of truth, env fallback comments match the real precedence order, and invalid `NEXT_PUBLIC_CHAIN_ID` values fall back cleanly instead of leaking `NaN`.
 
 ## Surprises & Discoveries
 
@@ -53,6 +54,12 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
   kept the event args obvious.
 - For the demo, a small polling loop plus an explicit refresh button is easier to explain than a
   websocket stream and still keeps the timeline current after local writes.
+- The env-fallback branch in `app/src/lib/contract-addresses.ts` was still using a raw
+  `Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? ...)` parse, which meant an invalid or non-positive
+  `NEXT_PUBLIC_CHAIN_ID` could silently turn into `NaN` even though the generated-localhost-first
+  precedence was otherwise correct.
+- The required `pnpm web:build` check is currently blocked by an existing type mismatch in
+  `app/src/components/funding-slice.tsx`, not by the env-doc or chain-id hardening in this pass.
 
 ## Decision Log
 
@@ -106,6 +113,9 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - The timeline now carries a compact `Demo ready` / `Missing local deploy` status plus the latest
   write outcome so the interview flow can explain setup problems or recent success without bouncing
   between cards.
+- This M2.3 hardening pass keeps runtime address precedence and the generated/public app wiring
+  shape unchanged. It only tightens the env comments to match the real generated-first flow and
+  replaces the raw env chain-id parse with a safe fallback parser.
 
 ## Context and Orientation
 
@@ -237,3 +247,12 @@ unchanged, but makes `seed.ts` and `demo.ts` fail early with a short missing-byt
 `deployments/localhost.json` points at empty addresses on a fresh localhost node. Live validation
 covered the new failure mode first, then a normal `deploy:local`, `seed:local`, and `demo:local`
 happy path on the same node.
+
+This M2.3 hardening pass leaves `app/src/lib/generated/abi.ts`,
+`app/src/lib/generated/addresses.ts`, and the exported app contract wiring shape unchanged while
+making the env docs truthful about the generated-localhost-first flow.
+`app/src/lib/contract-addresses.ts` now parses `NEXT_PUBLIC_CHAIN_ID` defensively in the
+env-fallback branch and falls back to `generatedAddresses.localhost.chainId` when the env value is
+missing, invalid, `NaN`, or non-positive. `pnpm compile` and `pnpm abi:sync` succeeded, while the
+required `pnpm web:build` check remains blocked by an existing type mismatch in
+`app/src/components/funding-slice.tsx`.

@@ -8,6 +8,20 @@ type ContractAddresses = {
   mockUsdc: `0x${string}`;
 };
 
+function parseEnvChainId(value: string | undefined, fallbackChainId: number): number {
+  const normalizedValue = value?.trim();
+  if (!normalizedValue) {
+    return fallbackChainId;
+  }
+
+  const parsed = Number(normalizedValue);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return fallbackChainId;
+  }
+
+  return parsed;
+}
+
 function readEnvAddress(
   name: 'NEXT_PUBLIC_POLICYVAULT_ADDRESS' | 'NEXT_PUBLIC_MOCKUSDC_ADDRESS',
 ): `0x${string}` | undefined {
@@ -28,7 +42,10 @@ export const hasEnvAddressFallback =
   envFallbackAddresses.policyVault !== undefined && envFallbackAddresses.mockUsdc !== undefined;
 const envFallbackContractAddresses: ContractAddresses | undefined = hasEnvAddressFallback
   ? {
-      chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? generatedLocalhostAddresses.chainId),
+      chainId: parseEnvChainId(
+        process.env.NEXT_PUBLIC_CHAIN_ID,
+        generatedLocalhostAddresses.chainId,
+      ),
       policyVault: envFallbackAddresses.policyVault!,
       mockUsdc: envFallbackAddresses.mockUsdc!,
     }
