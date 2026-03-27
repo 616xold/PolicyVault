@@ -1,6 +1,6 @@
 'use client';
 
-import { formatTokenAmount, formatUnixTimestamp } from '../lib/format.js';
+import { formatTokenAmount, formatUnixTimestamp, shortAddress } from '../lib/format.js';
 import type { PolicyDetails, PolicyLookupState, PolicyWriteState } from '../lib/policy.js';
 
 type PolicyPanelProps = {
@@ -76,11 +76,11 @@ export function PolicyPanel({
         </div>
       </div>
       <p className="panel-intro">
-        Policy ids stay manual in this MVP, so the created id becomes the exact lookup key for
-        later reads and actions.
+        The created policy id stays manual in this MVP, so it becomes the exact key for later reads
+        and actions.
       </p>
       <div className="form-row">
-        <label className="label" htmlFor="beneficiary">
+        <label className="label field-label" htmlFor="beneficiary">
           Beneficiary
         </label>
         <input
@@ -91,8 +91,8 @@ export function PolicyPanel({
         />
       </div>
       <div className="form-row">
-        <label className="label" htmlFor="cap">
-          Cap
+        <label className="label field-label" htmlFor="cap">
+          Cap amount
         </label>
         <input
           id="cap"
@@ -102,13 +102,13 @@ export function PolicyPanel({
           onChange={(event) => onCapChange(event.target.value)}
         />
         <div className="inline-meta">
-          <span className="label">Preview</span>
+          <span className="label">Parsed amount</span>
           <span className="value small-value">{capPreview || 'Enter a cap amount'}</span>
         </div>
       </div>
       <div className="form-row">
-        <label className="label" htmlFor="expiry">
-          Expiry (unix timestamp)
+        <label className="label field-label" htmlFor="expiry">
+          Expiry timestamp
         </label>
         <input
           id="expiry"
@@ -118,9 +118,9 @@ export function PolicyPanel({
           onChange={(event) => onExpiryChange(event.target.value)}
         />
       </div>
-      <p className="note">
+      <p className="note form-note">
         {createDisabledReason ??
-          'Create policy is an owner-side action. The contract still decides whether the connected wallet is allowed to send it.'}
+          'Create is owner-side. The contract still decides whether the connected wallet can send it.'}
       </p>
       <div className="button-row">
         <button
@@ -138,7 +138,7 @@ export function PolicyPanel({
         </button>
         <button
           type="button"
-          className="secondary"
+          className="ghost"
           disabled={createState.phase === 'idle'}
           onClick={onClearCreateState}
         >
@@ -146,15 +146,21 @@ export function PolicyPanel({
         </button>
       </div>
       {createState.phase !== 'idle' ? (
-        <div className={`status-box ${createStatusClass}`}>
+        <div className={`status-box action-status ${createStatusClass}`}>
           <p className="status-copy">{createState.message}</p>
-          {createStatusTxHash ? <p className="status-copy label">Tx {createStatusTxHash}</p> : null}
+          {createStatusTxHash ? (
+            <p className="status-meta code" title={createStatusTxHash}>
+              Tx {shortAddress(createStatusTxHash)}
+            </p>
+          ) : null}
         </div>
       ) : null}
       {createdPolicyId ? (
-        <div className="detail-row detail-row-stack">
+        <div className="detail-row detail-row-stack detail-callout">
           <span className="label">Last created policy id</span>
-          <span className="value code small-value">{createdPolicyId}</span>
+          <span className="value code small-value" title={createdPolicyId}>
+            {shortAddress(createdPolicyId)}
+          </span>
         </div>
       ) : null}
 
@@ -162,10 +168,10 @@ export function PolicyPanel({
 
       <div className="subsection-header">
         <p className="subsection-title">Inspect by policy id</p>
-        <p className="note">Read the exact on-chain policy state without adding a list or indexer.</p>
+        <p className="note">Read the exact state without adding a list or indexer.</p>
       </div>
       <div className="form-row">
-        <label className="label" htmlFor="lookup-policy-id">
+        <label className="label field-label" htmlFor="lookup-policy-id">
           Load policy by id
         </label>
         <input
@@ -175,13 +181,13 @@ export function PolicyPanel({
           onChange={(event) => onLookupPolicyIdChange(event.target.value)}
         />
       </div>
-      <p className="note">
+      <p className="note form-note">
         {lookupDisabledReason ??
-          'Policy id is the MVP lookup key. Loading works from the local RPC even if a wallet is disconnected.'}
+          'Policy id is the MVP lookup key. Local RPC reads still work while the wallet is disconnected.'}
       </p>
       <button
         type="button"
-        className="secondary"
+        className="ghost"
         disabled={Boolean(lookupDisabledReason) || isLookupBusy || !lookupPolicyId.trim()}
         onClick={onLoadPolicy}
       >
@@ -196,15 +202,21 @@ export function PolicyPanel({
         <div className="detail-list">
           <div className="detail-row detail-row-stack">
             <span className="label">Loaded policy id</span>
-            <span className="value code small-value">{loadedPolicyId}</span>
+            <span className="value code small-value" title={loadedPolicyId}>
+              {shortAddress(loadedPolicyId)}
+            </span>
           </div>
           <div className="detail-row detail-row-stack">
             <span className="label">Owner</span>
-            <span className="value code small-value">{loadedPolicy.owner}</span>
+            <span className="value code small-value" title={loadedPolicy.owner}>
+              {shortAddress(loadedPolicy.owner)}
+            </span>
           </div>
           <div className="detail-row detail-row-stack">
             <span className="label">Beneficiary</span>
-            <span className="value code small-value">{loadedPolicy.beneficiary}</span>
+            <span className="value code small-value" title={loadedPolicy.beneficiary}>
+              {shortAddress(loadedPolicy.beneficiary)}
+            </span>
           </div>
           <div className="detail-row">
             <span className="label">Cap</span>

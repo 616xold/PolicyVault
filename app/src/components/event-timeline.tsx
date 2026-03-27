@@ -62,7 +62,7 @@ export function EventTimeline({
         </div>
         <button
           type="button"
-          className="secondary"
+          className="ghost"
           disabled={loadState.phase === 'loading'}
           onClick={onRefresh}
         >
@@ -71,7 +71,7 @@ export function EventTimeline({
       </div>
 
       <div className="timeline-status-grid">
-        <div className="status-box">
+        <div className="status-box timeline-status-card">
           <div className="inline-meta">
             <span className="label">Contract status</span>
             <span className={`tag status-tag ${statusToneClass(contractStatusTone)}`}>
@@ -81,7 +81,7 @@ export function EventTimeline({
           <p className="note">{contractStatusDetail}</p>
         </div>
 
-        <div className="status-box">
+        <div className="status-box timeline-status-card">
           <div className="inline-meta">
             <span className="label">Last action</span>
             <span className={`timeline-status-copy ${statusToneClass(lastActionTone)}`}>
@@ -99,7 +99,7 @@ export function EventTimeline({
           <p className="status-copy">{loadState.message}</p>
         </div>
       ) : (
-        <p className="note">{loadState.message}</p>
+        <p className="note meta-note timeline-load-note">{loadState.message}</p>
       )}
 
       <div className="timeline">
@@ -113,13 +113,15 @@ export function EventTimeline({
                 <span className="tag">{eventLabel(entry.kind)}</span>
                 <span className="label">#{entry.blockNumber.toString()}</span>
               </div>
-              <div className="value">{entry.title}</div>
-              <div className="timeline-summary">{entry.summary}</div>
-              <div className="timeline-meta">{entry.metadata}</div>
+              <div className="timeline-item-body">
+                <div className="value">{entry.title}</div>
+                <div className="timeline-summary">{entry.summary}</div>
+                <div className="timeline-meta code">{entry.metadata}</div>
+              </div>
             </div>
           ))
         ) : (
-          <div className="timeline-item">
+          <div className="timeline-item timeline-item-empty">
             <div className="value">No PolicyVault events yet.</div>
             <div className="note">
               The first deposit, policy create, charge, revoke, or withdraw will show up here.

@@ -21,6 +21,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T15:03:35Z M3 hardening add a lightweight live bytecode probe so the dashboard distinguishes missing addresses, RPC outage, configured-but-empty contract addresses, and ready; sync the local UI docs; and keep `app/next-env.d.ts` as tracked app scaffold.
 - [x] 2026-03-26T23:07:57Z M4.1 rewrite the README for reviewer-facing accuracy, sync the local-dev and demo docs to the real current UI and script flow, make the tracked-file policy explicit, and keep runtime code unchanged.
 - [x] 2026-03-27T01:00:03Z M4.2 reshape the localhost UI into a light-first composed workspace with a restrained masthead, one continuous three-step workflow surface, an adjacent context-and-evidence rail, purposeful Google and mono typography, and quiet CSS-only entrance and timeline emphasis motion while keeping chain logic unchanged.
+- [x] 2026-03-27T01:18:23Z M4.2 surface-polish follow-up tighten button hierarchy, helper-copy density, disabled and focus states, address/hash presentation, and timeline/status legibility through presentational component plus CSS edits only, then validate with `pnpm compile`, `pnpm abi:sync`, `pnpm web:build`, and browser checks at `1440x900`, `1280x800`, and `390x844`.
 
 ## Surprises & Discoveries
 
@@ -41,6 +42,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - After the dashboard migration and timeline work, the old funding-only container file was still sitting in the workspace even though runtime had already moved entirely to `VaultDashboard`, and two stale plan references were still pointing at that dead file.
 - On this Next.js version, `pnpm web:build` restores the `import "./.next/types/routes.d.ts";` line in `app/next-env.d.ts`, so the stable repo policy is to keep that file tracked and stop deleting it after builds instead of fighting the generator.
 - M4.1 surfaced mostly repo-hygiene drift rather than product drift: `app/next-env.d.ts` had slipped to the dev-only import, `deployments/localhost.json` had been deleted locally despite being the tracked source of truth, and `.nvmrc` plus `pnpm-lock.yaml` existed without being tracked yet.
+- During this polish pass, the shell-side `deploy:local`, `seed:local`, and `demo:local` flows all completed and both shell-side curl plus browser-side `fetch` calls could reach `http://127.0.0.1:8545`, but the live dashboard still hydrated into the existing `rpc-unavailable` fallback on this machine, so ready-state and populated-timeline visual QA remained partially blocked by a pre-existing browser runtime issue rather than the new presentation changes.
 
 ## Decision Log
 
@@ -72,6 +74,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - `app/next-env.d.ts` is now treated as intentional tracked app scaffold. We no longer remove it after builds, and repo hygiene should focus on real generated directories like `.next` instead.
 - 2026-03-26T23:07:57Z: M4.1 is doc-and-hygiene only. Keep `deployments/localhost.json` tracked as the localhost source of truth, keep `app/next-env.d.ts` tracked in its stable build form, intentionally add `.nvmrc` and `pnpm-lock.yaml` as repo metadata, and do not broaden into contract, script, or UI feature work.
 - 2026-03-27T01:00:03Z: This visual-system pass stays presentation-only. The dashboard now reads as one light workspace with a single three-step workflow surface on the left and a secondary context-plus-evidence rail on the right, while the existing wagmi and viem interaction path, readiness logic, and manual policy-id flow stay unchanged.
+- 2026-03-27T01:18:23Z: This follow-up polish pass also stays presentation-only. Tighten hierarchy, spacing rhythm, copy density, disabled/focus states, and timeline readability without changing the wallet flow, readiness logic, contract wiring, or feature scope; if the browser-side ready state still sticks in fallback, record that limitation instead of broadening into unrelated runtime fixes.
 
 ## Context and Orientation
 
@@ -252,3 +255,19 @@ compile`, `pnpm abi:sync`, and `pnpm web:build`, plus live browser inspection at
 `1440x900` and `390x844` with no horizontal overflow at either size. The exact next submilestone
 remains M4.2 screenshots and runbook polish now that the interview-facing app surface is ready to
 capture.
+
+This M4.2 surface-polish follow-up keeps behavior unchanged while sharpening the details that make
+the dashboard feel intentional in both disconnected and action-ready states: calmer primary versus
+supporting button hierarchy, denser and shorter helper copy, cleaner focus and disabled states,
+more graceful address and hash presentation, and a more legible status-plus-timeline surface.
+`app/src/app/globals.css` now carries the refined control, spacing, status, and timeline rhythm,
+while the presentational panels and timeline formatting helpers keep the same chain behavior but
+present it with tighter copy and calmer secondary text. `pnpm compile`, `pnpm abi:sync`, and
+`pnpm web:build` all passed, and browser QA at `1440x900`, `1280x800`, and `390x844` confirmed no
+horizontal overflow plus a more deliberate disconnected-state and mobile presentation. On this
+machine, the live dashboard still hydrated into the existing `RPC offline` fallback even after
+fresh `deploy:local`, `seed:local`, and `demo:local` runs, so ready-state and populated-timeline
+browser verification remain partially blocked by that pre-existing runtime issue. The exact next
+thread I recommend is a narrow browser-readiness investigation to restore true `Demo ready` plus
+populated timeline rendering in the live app, followed by the final screenshot and runbook capture
+pass.

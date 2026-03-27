@@ -1,5 +1,6 @@
 'use client';
 
+import { shortAddress } from '../lib/format.js';
 import type { PolicyWriteState } from '../lib/policy.js';
 
 type ChargePanelProps = {
@@ -65,11 +66,15 @@ export function ChargePanel({
         </div>
       </div>
       <p className="panel-intro">
-        Charge must come from the beneficiary. Revoke and withdraw must come from the owner.
-        Wrong-actor attempts stay visible as contract results instead of disappearing buttons.
+        Charge stays beneficiary-side. Revoke and withdraw stay owner-side. Wrong-actor attempts
+        remain visible as contract results instead of disappearing buttons.
       </p>
+      <div className="subsection-header">
+        <p className="subsection-title">Charge or revoke a policy</p>
+        <p className="note">Use the same policy id for both actions.</p>
+      </div>
       <div className="form-row">
-        <label className="label" htmlFor="policy-id">
+        <label className="label field-label" htmlFor="policy-id">
           Policy id
         </label>
         <input
@@ -80,7 +85,7 @@ export function ChargePanel({
         />
       </div>
       <div className="form-row">
-        <label className="label" htmlFor="charge-amount">
+        <label className="label field-label" htmlFor="charge-amount">
           Charge amount
         </label>
         <input
@@ -91,40 +96,13 @@ export function ChargePanel({
           onChange={(event) => onChargeAmountChange(event.target.value)}
         />
         <div className="inline-meta">
-          <span className="label">Charge preview</span>
+          <span className="label">Parsed amount</span>
           <span className="value small-value">{chargePreview || 'Enter a charge amount'}</span>
         </div>
       </div>
-      <div className="form-row">
-        <label className="label" htmlFor="withdraw-amount">
-          Withdraw amount
-        </label>
-        <input
-          id="withdraw-amount"
-          inputMode="decimal"
-          placeholder={`25.00 ${tokenSymbol}`}
-          value={withdrawAmount}
-          onChange={(event) => onWithdrawAmountChange(event.target.value)}
-        />
-        <div className="inline-meta">
-          <span className="label">Withdraw preview</span>
-          <span className="value small-value">{withdrawPreview || 'Enter a withdraw amount'}</span>
-        </div>
-      </div>
-      <div className="form-row">
-        <label className="label" htmlFor="withdraw-receiver">
-          Withdraw receiver
-        </label>
-        <input
-          id="withdraw-receiver"
-          placeholder="0x..."
-          value={withdrawReceiver}
-          onChange={(event) => onWithdrawReceiverChange(event.target.value)}
-        />
-      </div>
-      <p className="note">
+      <p className="note form-note">
         {disabledReason ??
-          'Use the policy id for charge and revoke. Withdraw uses the connected owner wallet and the explicit receiver address.'}
+          'Charge is beneficiary-only. Revoke still stays visible so the contract result can be narrated directly.'}
       </p>
       <div className="button-row">
         <button
@@ -148,6 +126,47 @@ export function ChargePanel({
             ? 'Revoking…'
             : 'Revoke'}
         </button>
+      </div>
+
+      <div className="panel-divider" />
+
+      <div className="subsection-header">
+        <p className="subsection-title">Withdraw unused funds</p>
+        <p className="note">Send the remaining vault balance to an explicit receiver.</p>
+      </div>
+      <div className="form-row">
+        <label className="label field-label" htmlFor="withdraw-amount">
+          Withdraw amount
+        </label>
+        <input
+          id="withdraw-amount"
+          inputMode="decimal"
+          placeholder={`25.00 ${tokenSymbol}`}
+          value={withdrawAmount}
+          onChange={(event) => onWithdrawAmountChange(event.target.value)}
+        />
+        <div className="inline-meta">
+          <span className="label">Parsed amount</span>
+          <span className="value small-value">{withdrawPreview || 'Enter a withdraw amount'}</span>
+        </div>
+      </div>
+      <div className="form-row">
+        <label className="label field-label" htmlFor="withdraw-receiver">
+          Receiver address
+        </label>
+        <input
+          id="withdraw-receiver"
+          placeholder="0x..."
+          value={withdrawReceiver}
+          onChange={(event) => onWithdrawReceiverChange(event.target.value)}
+        />
+      </div>
+      <p className="note form-note">
+        {disabledReason
+          ? 'Withdraw stays unavailable until the dashboard is ready.'
+          : 'Withdraw uses the connected owner wallet and the explicit receiver address.'}
+      </p>
+      <div className="button-row">
         <button
           type="button"
           className="secondary"
@@ -162,7 +181,7 @@ export function ChargePanel({
         </button>
         <button
           type="button"
-          className="secondary"
+          className="ghost"
           disabled={actionState.phase === 'idle'}
           onClick={onClearStatus}
         >
@@ -170,9 +189,13 @@ export function ChargePanel({
         </button>
       </div>
       {actionState.phase !== 'idle' ? (
-        <div className={`status-box ${statusClass}`}>
+        <div className={`status-box action-status ${statusClass}`}>
           <p className="status-copy">{actionState.message}</p>
-          {statusTxHash ? <p className="status-copy label">Tx {statusTxHash}</p> : null}
+          {statusTxHash ? (
+            <p className="status-meta code" title={statusTxHash}>
+              Tx {shortAddress(statusTxHash)}
+            </p>
+          ) : null}
         </div>
       ) : null}
     </section>

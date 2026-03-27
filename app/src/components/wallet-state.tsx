@@ -1,5 +1,7 @@
 'use client';
 
+import { shortAddress } from '../lib/format.js';
+
 type WalletStateProps = {
   address?: `0x${string}`;
   allowance: string;
@@ -33,6 +35,8 @@ export function WalletState({
   tokenLabel,
   vaultBalance,
 }: WalletStateProps) {
+  const addressLabel = address ? shortAddress(address) : 'Not connected';
+
   return (
     <section className="context-panel wallet-panel">
       <div className="panel-header">
@@ -63,7 +67,9 @@ export function WalletState({
       <div className="detail-list">
         <div className="detail-row detail-row-stack">
           <span className="label">Connected address</span>
-          <span className="value code small-value">{address ?? 'Not connected'}</span>
+          <span className="value code small-value" title={address}>
+            {addressLabel}
+          </span>
         </div>
       </div>
 
@@ -71,7 +77,7 @@ export function WalletState({
         {isConnected ? (
           <button
             type="button"
-            className="secondary"
+            className="ghost"
             disabled={isDisconnectPending}
             onClick={onDisconnect}
           >
@@ -88,7 +94,7 @@ export function WalletState({
         )}
       </div>
       {connectError ? <p className="status-copy error-copy">{connectError}</p> : null}
-      <p className="note">{note}</p>
+      <p className="note form-note">{note}</p>
     </section>
   );
 }

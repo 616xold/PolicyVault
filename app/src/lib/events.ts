@@ -1,6 +1,6 @@
 import { type PublicClient } from 'viem';
 
-import { formatTokenAmount, formatUnixTimestamp, shortAddress } from './format.js';
+import { formatCompactTimestamp, formatTokenAmount, shortAddress } from './format.js';
 import { PolicyVaultAbi } from './generated/abi.js';
 
 const TIMELINE_BLOCK_WINDOW = 2_000n;
@@ -112,9 +112,9 @@ function buildMetadata(
   extraDetail?: string,
 ): string {
   const parts = [
-    formatUnixTimestamp(blockTimestamp),
-    `Block ${record.blockNumber.toString()}`,
+    formatCompactTimestamp(blockTimestamp),
     `Tx ${shortAddress(record.transactionHash)}`,
+    `#${record.blockNumber.toString()}`,
   ];
 
   if (extraDetail) {
@@ -155,8 +155,8 @@ function formatTimelineRecord(
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
         metadata: buildMetadata(record, blockTimestamp),
-        summary: `Vault balance is now ${tokenAmount(record.newVaultBalance)}.`,
-        title: `${shortAddress(record.owner)} deposited ${tokenAmount(record.amount)}.`,
+        summary: `From ${shortAddress(record.owner)}. Vault balance ${tokenAmount(record.newVaultBalance)}.`,
+        title: `${tokenAmount(record.amount)} deposited`,
       };
     case 'policy-created':
       return {
@@ -164,8 +164,8 @@ function formatTimelineRecord(
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
         metadata: buildMetadata(record, blockTimestamp, `Policy ${shortAddress(record.policyId)}`),
-        summary: `${shortAddress(record.owner)} authorized ${shortAddress(record.beneficiary)} for ${tokenAmount(record.cap)} until ${formatUnixTimestamp(record.expiresAt)}.`,
-        title: `Policy ${shortAddress(record.policyId)} created for ${shortAddress(record.beneficiary)}.`,
+        summary: `Cap ${tokenAmount(record.cap)}. Expires ${formatCompactTimestamp(record.expiresAt)} for ${shortAddress(record.beneficiary)}.`,
+        title: `Policy created for ${shortAddress(record.beneficiary)}`,
       };
     case 'charge':
       return {
@@ -173,8 +173,8 @@ function formatTimelineRecord(
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
         metadata: buildMetadata(record, blockTimestamp, `Policy ${shortAddress(record.policyId)}`),
-        summary: `${shortAddress(record.beneficiary)} charged ${tokenAmount(record.amount)} from ${shortAddress(record.owner)}. Spent is now ${tokenAmount(record.spent)} with ${tokenAmount(record.remaining)} remaining.`,
-        title: `Charge executed on ${shortAddress(record.policyId)}.`,
+        summary: `${shortAddress(record.beneficiary)} charged ${shortAddress(record.owner)}. Spent ${tokenAmount(record.spent)}. Remaining ${tokenAmount(record.remaining)}.`,
+        title: `${tokenAmount(record.amount)} charged`,
       };
     case 'policy-revoked':
       return {
@@ -182,8 +182,8 @@ function formatTimelineRecord(
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
         metadata: buildMetadata(record, blockTimestamp, `Policy ${shortAddress(record.policyId)}`),
-        summary: `${shortAddress(record.owner)} revoked ${shortAddress(record.beneficiary)}'s spend path.`,
-        title: `Policy ${shortAddress(record.policyId)} revoked.`,
+        summary: `${shortAddress(record.owner)} closed ${shortAddress(record.beneficiary)}'s spend path.`,
+        title: 'Policy revoked',
       };
     case 'withdraw':
       return {
@@ -191,8 +191,8 @@ function formatTimelineRecord(
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
         metadata: buildMetadata(record, blockTimestamp),
-        summary: `${shortAddress(record.owner)} withdrew ${tokenAmount(record.amount)} to ${shortAddress(record.receiver)}. Vault balance is now ${tokenAmount(record.newVaultBalance)}.`,
-        title: `Withdrawal sent to ${shortAddress(record.receiver)}.`,
+        summary: `Sent to ${shortAddress(record.receiver)}. Vault balance ${tokenAmount(record.newVaultBalance)}.`,
+        title: `${tokenAmount(record.amount)} withdrawn`,
       };
   }
 }
@@ -365,9 +365,9 @@ export async function fetchPolicyVaultTimeline(
     .sort(compareTimelineRecords)
     .slice(0, options.maxItems ?? DEFAULT_TIMELINE_LIMIT);
 
-  const blockNumbers = [...new Set(recentRecords.map((record) => record.blockNumber.toString()))].map(
-    (blockNumber) => BigInt(blockNumber),
-  );
+  const blockNumbers = [
+    ...new Set(recentRecords.map((record) => record.blockNumber.toString())),
+  ].map((blockNumber) => BigInt(blockNumber));
 
   const blocks = await Promise.all(
     blockNumbers.map((blockNumber) =>
