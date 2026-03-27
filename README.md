@@ -36,15 +36,15 @@ PolicyVault v1 explicitly does not include:
 
 ## Interface
 
-Fund, create, and operate a bounded spend flow from one surface.
+A single workspace keeps funding, policy setup, and policy use in one view.
 
 ![PolicyVault desktop workflow](docs/screenshots/policyvault-desktop-workflow.png)
 
-Activity stays adjacent to the workflow as live evidence.
+Receipts keep readiness and recent activity beside the flow.
 
 ![PolicyVault desktop evidence](docs/screenshots/policyvault-desktop-evidence.png)
 
-The mobile surface keeps the same flow and hierarchy.
+The mobile view preserves the same brand-first hierarchy.
 
 ![PolicyVault mobile interface](docs/screenshots/policyvault-mobile.png)
 
