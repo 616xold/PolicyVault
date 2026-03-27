@@ -54,9 +54,12 @@ export function EventTimeline({
   onRefresh,
 }: EventTimelineProps) {
   return (
-    <section className="card stack">
-      <div className="timeline-header">
-        <h2 className="panel-title">Recent event timeline</h2>
+    <section className="context-panel evidence-panel">
+      <div className="panel-header timeline-header">
+        <div>
+          <p className="panel-eyebrow">Evidence</p>
+          <h3 className="panel-title">Recent chain activity</h3>
+        </div>
         <button
           type="button"
           className="secondary"
@@ -67,19 +70,27 @@ export function EventTimeline({
         </button>
       </div>
 
-      <div className="status-box">
-        <div className="inline-meta">
-          <span className="label">Contract status</span>
-          <span className={`tag status-tag ${statusToneClass(contractStatusTone)}`}>
-            {contractStatusLabel}
-          </span>
+      <div className="timeline-status-grid">
+        <div className="status-box">
+          <div className="inline-meta">
+            <span className="label">Contract status</span>
+            <span className={`tag status-tag ${statusToneClass(contractStatusTone)}`}>
+              {contractStatusLabel}
+            </span>
+          </div>
+          <p className="note">{contractStatusDetail}</p>
         </div>
-        <p className="note">{contractStatusDetail}</p>
-        <div className="inline-meta">
-          <span className="label">Last action</span>
-          <span className={`timeline-status-copy ${statusToneClass(lastActionTone)}`}>
-            {lastActionLabel}
-          </span>
+
+        <div className="status-box">
+          <div className="inline-meta">
+            <span className="label">Last action</span>
+            <span className={`timeline-status-copy ${statusToneClass(lastActionTone)}`}>
+              {lastActionLabel}
+            </span>
+          </div>
+          <p className="note">
+            The latest confirmed write stays visible here even before you open a log row.
+          </p>
         </div>
       </div>
 
@@ -93,8 +104,11 @@ export function EventTimeline({
 
       <div className="timeline">
         {entries.length > 0 ? (
-          entries.map((entry) => (
-            <div className="timeline-item" key={entry.key}>
+          entries.map((entry, index) => (
+            <div
+              className={`timeline-item ${index === 0 ? 'timeline-item-latest' : ''}`}
+              key={entry.key}
+            >
               <div className="timeline-item-header">
                 <span className="tag">{eventLabel(entry.kind)}</span>
                 <span className="label">#{entry.blockNumber.toString()}</span>
@@ -107,7 +121,7 @@ export function EventTimeline({
         ) : (
           <div className="timeline-item">
             <div className="value">No PolicyVault events yet.</div>
-            <div className="label">
+            <div className="note">
               The first deposit, policy create, charge, revoke, or withdraw will show up here.
             </div>
           </div>
@@ -115,8 +129,8 @@ export function EventTimeline({
       </div>
 
       <p className="note">
-        This stays intentionally simple: direct log reads from the configured PolicyVault contract,
-        deterministic ordering, and no indexer in the middle.
+        Direct log reads from the configured PolicyVault contract keep the evidence legible without
+        adding an indexer.
       </p>
     </section>
   );

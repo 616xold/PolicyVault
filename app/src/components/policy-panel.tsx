@@ -68,11 +68,16 @@ export function PolicyPanel({
       : undefined;
 
   return (
-    <section className="card stack">
-      <h2 className="panel-title">Policy</h2>
-      <p className="note">
-        Create a bounded policy as the connected owner, then load by policy id to inspect the exact
-        on-chain state without adding a list or index layer.
+    <section className="workflow-panel">
+      <div className="panel-header">
+        <div>
+          <p className="panel-eyebrow">02 Create policy</p>
+          <h3 className="panel-title">Set the beneficiary, cap, and expiry</h3>
+        </div>
+      </div>
+      <p className="panel-intro">
+        Policy ids stay manual in this MVP, so the created id becomes the exact lookup key for
+        later reads and actions.
       </p>
       <div className="form-row">
         <label className="label" htmlFor="beneficiary">
@@ -147,12 +152,18 @@ export function PolicyPanel({
         </div>
       ) : null}
       {createdPolicyId ? (
-        <div className="form-row">
+        <div className="detail-row detail-row-stack">
           <span className="label">Last created policy id</span>
           <span className="value code small-value">{createdPolicyId}</span>
         </div>
       ) : null}
 
+      <div className="panel-divider" />
+
+      <div className="subsection-header">
+        <p className="subsection-title">Inspect by policy id</p>
+        <p className="note">Read the exact on-chain policy state without adding a list or indexer.</p>
+      </div>
       <div className="form-row">
         <label className="label" htmlFor="lookup-policy-id">
           Load policy by id
@@ -182,42 +193,42 @@ export function PolicyPanel({
         </div>
       ) : null}
       {loadedPolicy && loadedPolicyId ? (
-        <div className="stack">
-          <div className="form-row">
+        <div className="detail-list">
+          <div className="detail-row detail-row-stack">
             <span className="label">Loaded policy id</span>
             <span className="value code small-value">{loadedPolicyId}</span>
           </div>
-          <div className="form-row">
+          <div className="detail-row detail-row-stack">
             <span className="label">Owner</span>
             <span className="value code small-value">{loadedPolicy.owner}</span>
           </div>
-          <div className="form-row">
+          <div className="detail-row detail-row-stack">
             <span className="label">Beneficiary</span>
             <span className="value code small-value">{loadedPolicy.beneficiary}</span>
           </div>
-          <div className="inline-meta">
+          <div className="detail-row">
             <span className="label">Cap</span>
             <span className="value small-value">
               {formatTokenAmount(loadedPolicy.cap, tokenDecimals, tokenSymbol)}
             </span>
           </div>
-          <div className="inline-meta">
+          <div className="detail-row">
             <span className="label">Spent</span>
             <span className="value small-value">
               {formatTokenAmount(loadedPolicy.spent, tokenDecimals, tokenSymbol)}
             </span>
           </div>
-          <div className="inline-meta">
+          <div className="detail-row">
             <span className="label">Remaining</span>
             <span className="value small-value">
               {formatTokenAmount(loadedPolicy.remaining, tokenDecimals, tokenSymbol)}
             </span>
           </div>
-          <div className="inline-meta">
+          <div className="detail-row">
             <span className="label">Expiry</span>
             <span className="value small-value">{formatUnixTimestamp(loadedPolicy.expiresAt)}</span>
           </div>
-          <div className="inline-meta">
+          <div className="detail-row">
             <span className="label">Revoked</span>
             <span className="value small-value">{loadedPolicy.revoked ? 'Yes' : 'No'}</span>
           </div>

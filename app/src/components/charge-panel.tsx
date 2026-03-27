@@ -57,11 +57,16 @@ export function ChargePanel({
       : undefined;
 
   return (
-    <section className="card stack">
-      <h2 className="panel-title">Charge / revoke / withdraw</h2>
-      <p className="note">
-        Charge must be sent by the beneficiary. Revoke and withdraw must be sent by the owner.
-        Wrong-actor attempts stay visible as clear contract results instead of disappearing buttons.
+    <section className="workflow-panel">
+      <div className="panel-header">
+        <div>
+          <p className="panel-eyebrow">03 Operate policy</p>
+          <h3 className="panel-title">Charge, revoke, or withdraw</h3>
+        </div>
+      </div>
+      <p className="panel-intro">
+        Charge must come from the beneficiary. Revoke and withdraw must come from the owner.
+        Wrong-actor attempts stay visible as contract results instead of disappearing buttons.
       </p>
       <div className="form-row">
         <label className="label" htmlFor="policy-id">

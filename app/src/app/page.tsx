@@ -2,26 +2,21 @@ import { VaultDashboard } from '../components/vault-dashboard.js';
 
 export default function Page() {
   return (
-    <main>
-      <section className="hero">
-        <span className="tag">Interview-targeted Web3 MVP</span>
-        <h1>PolicyVault</h1>
-        <p>
-          A bounded ERC-20 spending demo where an owner deposits funds into a vault, creates a
-          beneficiary-specific spending policy with a cap and expiry, and the beneficiary can only
-          charge within those on-chain limits.
+    <main className="app-shell">
+      <section className="masthead">
+        <div className="masthead-copy">
+          <p className="eyebrow">Bounded ERC-20 spending surface</p>
+          <h1>PolicyVault</h1>
+          <p className="masthead-lede">
+            Fund a dedicated vault, create a beneficiary policy with a cap and expiry, and operate
+            the full spend path against live on-chain state.
+          </p>
+        </div>
+        <p className="masthead-meta">
+          MockUSDC on localhost. Manual policy ids. Direct event evidence.
         </p>
       </section>
-
-      <div className="grid two">
-        <VaultDashboard />
-      </div>
-
-      <p className="note section-note">
-        Policy ids stay intentionally manual in this MVP, and the recent-event timeline helps
-        narrate the latest deposit, policy, charge, revoke, and withdraw transitions without adding
-        an indexer.
-      </p>
+      <VaultDashboard />
     </main>
   );
 }

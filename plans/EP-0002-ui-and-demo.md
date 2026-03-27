@@ -20,6 +20,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T14:52:49Z M3.2 cleanup remove the stale funding-only container residue, confirm `VaultDashboard` is the only active runtime container path, and clear leftover plan references to the dead file.
 - [x] 2026-03-26T15:03:35Z M3 hardening add a lightweight live bytecode probe so the dashboard distinguishes missing addresses, RPC outage, configured-but-empty contract addresses, and ready; sync the local UI docs; and keep `app/next-env.d.ts` as tracked app scaffold.
 - [x] 2026-03-26T23:07:57Z M4.1 rewrite the README for reviewer-facing accuracy, sync the local-dev and demo docs to the real current UI and script flow, make the tracked-file policy explicit, and keep runtime code unchanged.
+- [x] 2026-03-27T01:00:03Z M4.2 reshape the localhost UI into a light-first composed workspace with a restrained masthead, one continuous three-step workflow surface, an adjacent context-and-evidence rail, purposeful Google and mono typography, and quiet CSS-only entrance and timeline emphasis motion while keeping chain logic unchanged.
 
 ## Surprises & Discoveries
 
@@ -70,6 +71,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - This dashboard hardening pass keeps the write flows and panel ownership unchanged. It adds one small `getCode`-based readiness probe ahead of app reads so `Demo ready` only appears when both configured addresses actually have deployed bytecode on the current node.
 - `app/next-env.d.ts` is now treated as intentional tracked app scaffold. We no longer remove it after builds, and repo hygiene should focus on real generated directories like `.next` instead.
 - 2026-03-26T23:07:57Z: M4.1 is doc-and-hygiene only. Keep `deployments/localhost.json` tracked as the localhost source of truth, keep `app/next-env.d.ts` tracked in its stable build form, intentionally add `.nvmrc` and `pnpm-lock.yaml` as repo metadata, and do not broaden into contract, script, or UI feature work.
+- 2026-03-27T01:00:03Z: This visual-system pass stays presentation-only. The dashboard now reads as one light workspace with a single three-step workflow surface on the left and a secondary context-plus-evidence rail on the right, while the existing wagmi and viem interaction path, readiness logic, and manual policy-id flow stay unchanged.
 
 ## Context and Orientation
 
@@ -236,3 +238,17 @@ story intact. Repo hygiene is explicit again: `deployments/localhost.json` stays
 localhost deploy artifact, `app/next-env.d.ts` stays tracked in the stable `pnpm web:build` form,
 and `.nvmrc` plus `pnpm-lock.yaml` are intentional tracked repo metadata. This pass is deliberately
 runtime-neutral. The exact next submilestone is M4.2 screenshots and runbook polish.
+
+This M4.2 visual pass keeps all business logic intact while making the app feel like one composed
+surface instead of a hero plus equal-weight card grid. `app/src/app/layout.tsx` now loads
+`Instrument Sans` for UI copy and `IBM Plex Mono` for addresses and hashes through `next/font/google`,
+with a small local type shim to satisfy the repo's NodeNext TypeScript setup. `page.tsx`,
+`vault-dashboard.tsx`, and the presentational components now organize the UI into one continuous
+workflow surface for fund / create / operate and a slimmer context-and-evidence rail for wallet
+state, readiness, and the recent timeline. `globals.css` now defines a light neutral palette,
+restrained blue accent system, quieter form and button chrome, and three small CSS-only motions:
+masthead reveal, workspace entrance, and latest-timeline-row emphasis. Validation covered `pnpm
+compile`, `pnpm abi:sync`, and `pnpm web:build`, plus live browser inspection at roughly
+`1440x900` and `390x844` with no horizontal overflow at either size. The exact next submilestone
+remains M4.2 screenshots and runbook polish now that the interview-facing app surface is ready to
+capture.

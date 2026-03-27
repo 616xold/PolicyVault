@@ -45,8 +45,16 @@ export function DepositPanel({
       : undefined;
 
   return (
-    <section className="card stack">
-      <h2 className="panel-title">Deposit</h2>
+    <section className="workflow-panel">
+      <div className="panel-header">
+        <div>
+          <p className="panel-eyebrow">01 Fund vault</p>
+          <h3 className="panel-title">Move {tokenSymbol} into PolicyVault</h3>
+        </div>
+      </div>
+      <p className="panel-intro">
+        Use approval or permit, then land in the same vault balance with a visible receipt trail.
+      </p>
       <div className="form-row">
         <label className="label" htmlFor="deposit-amount">
           Amount
@@ -69,7 +77,11 @@ export function DepositPanel({
       </div>
       <p className="note">{disabledReason ?? allowanceHint}</p>
       <div className="button-row">
-        <button type="button" disabled={Boolean(disabledReason) || isBusy || !amount.trim()} onClick={onApproveDeposit}>
+        <button
+          type="button"
+          disabled={Boolean(disabledReason) || isBusy || !amount.trim()}
+          onClick={onApproveDeposit}
+        >
           {isBusy && actionState.phase === 'pending' && actionState.mode === 'approve'
             ? 'Processing…'
             : 'Approve + deposit'}
@@ -91,7 +103,10 @@ export function DepositPanel({
           ) : null}
         </div>
       ) : null}
-      <p className="note">{tokenName} keeps both funding paths visible so the approve versus permit trade-off stays easy to narrate.</p>
+      <p className="note">
+        {tokenName} stays explicit here so the approve-versus-permit trade-off remains easy to
+        narrate.
+      </p>
     </section>
   );
 }

@@ -1034,114 +1034,144 @@ export function VaultDashboard() {
         : 'This amount will require an approval before deposit.';
 
   return (
-    <>
-      <WalletState
-        address={address}
-        allowance={formatTokenAmount(allowance, tokenDecimals, tokenSymbol)}
-        connectError={connectError ? getActionErrorMessage(connectError) : undefined}
-        connectionStatus={connectionStatus}
-        disableConnect={!selectedConnector}
-        isConnectPending={isConnectPending}
-        isConnected={isConnected}
-        isDisconnectPending={isDisconnectPending}
-        note={walletStateNote}
-        onConnect={handleConnect}
-        onDisconnect={() => disconnect()}
-        tokenBalance={formatTokenAmount(walletBalance, tokenDecimals, tokenSymbol)}
-        tokenLabel={tokenSymbol}
-        vaultBalance={formatTokenAmount(vaultBalance, tokenDecimals, tokenSymbol)}
-      />
+    <section className="workspace-grid">
+      <section className="workflow-shell">
+        <div className="surface-heading">
+          <div>
+            <p className="section-kicker">Working surface</p>
+            <h2 className="surface-title">Run the bounded spend flow in order.</h2>
+          </div>
+          <p className="surface-copy">
+            Fund the vault, create the policy, then charge, revoke, or withdraw against live local
+            reads. The UI stays manual on purpose so the contract story remains easy to explain.
+          </p>
+        </div>
 
-      <DepositPanel
-        actionState={fundingActionState}
-        allowanceHint={allowanceHint}
-        amount={depositAmount}
-        amountPreview={
-          parsedDepositAmount !== undefined
-            ? formatTokenAmount(parsedDepositAmount, tokenDecimals, tokenSymbol)
-            : ''
-        }
-        disabledReason={writeDisabledReason}
-        isBusy={fundingActionState.phase === 'pending'}
-        onAmountChange={updateDepositAmount}
-        onApproveDeposit={handleApproveDeposit}
-        onPermitDeposit={handlePermitDeposit}
-        tokenName={tokenName}
-        tokenSymbol={tokenSymbol}
-        walletBalance={formatTokenAmount(walletBalance, tokenDecimals, tokenSymbol)}
-      />
+        <div className="workflow-panels">
+          <DepositPanel
+            actionState={fundingActionState}
+            allowanceHint={allowanceHint}
+            amount={depositAmount}
+            amountPreview={
+              parsedDepositAmount !== undefined
+                ? formatTokenAmount(parsedDepositAmount, tokenDecimals, tokenSymbol)
+                : ''
+            }
+            disabledReason={writeDisabledReason}
+            isBusy={fundingActionState.phase === 'pending'}
+            onAmountChange={updateDepositAmount}
+            onApproveDeposit={handleApproveDeposit}
+            onPermitDeposit={handlePermitDeposit}
+            tokenName={tokenName}
+            tokenSymbol={tokenSymbol}
+            walletBalance={formatTokenAmount(walletBalance, tokenDecimals, tokenSymbol)}
+          />
 
-      <PolicyPanel
-        beneficiary={beneficiary}
-        cap={cap}
-        capPreview={
-          parsedCapAmount !== undefined
-            ? formatTokenAmount(parsedCapAmount, tokenDecimals, tokenSymbol)
-            : ''
-        }
-        createDisabledReason={writeDisabledReason}
-        createState={createPolicyState}
-        createdPolicyId={createdPolicyId}
-        expiry={expiry}
-        isCreateBusy={createPolicyState.phase === 'pending'}
-        isLookupBusy={policyLookupState.phase === 'loading'}
-        loadedPolicy={loadedPolicy}
-        loadedPolicyId={loadedPolicyId}
-        lookupDisabledReason={readDisabledReason}
-        lookupPolicyId={policyLookupId}
-        lookupState={policyLookupState}
-        onBeneficiaryChange={updateBeneficiary}
-        onCapChange={updateCap}
-        onClearCreateState={resetCreatePolicyState}
-        onCreatePolicy={handleCreatePolicy}
-        onExpiryChange={updateExpiry}
-        onLoadPolicy={handleLoadPolicy}
-        onLookupPolicyIdChange={updatePolicyLookupId}
-        tokenDecimals={tokenDecimals}
-        tokenSymbol={tokenSymbol}
-      />
+          <PolicyPanel
+            beneficiary={beneficiary}
+            cap={cap}
+            capPreview={
+              parsedCapAmount !== undefined
+                ? formatTokenAmount(parsedCapAmount, tokenDecimals, tokenSymbol)
+                : ''
+            }
+            createDisabledReason={writeDisabledReason}
+            createState={createPolicyState}
+            createdPolicyId={createdPolicyId}
+            expiry={expiry}
+            isCreateBusy={createPolicyState.phase === 'pending'}
+            isLookupBusy={policyLookupState.phase === 'loading'}
+            loadedPolicy={loadedPolicy}
+            loadedPolicyId={loadedPolicyId}
+            lookupDisabledReason={readDisabledReason}
+            lookupPolicyId={policyLookupId}
+            lookupState={policyLookupState}
+            onBeneficiaryChange={updateBeneficiary}
+            onCapChange={updateCap}
+            onClearCreateState={resetCreatePolicyState}
+            onCreatePolicy={handleCreatePolicy}
+            onExpiryChange={updateExpiry}
+            onLoadPolicy={handleLoadPolicy}
+            onLookupPolicyIdChange={updatePolicyLookupId}
+            tokenDecimals={tokenDecimals}
+            tokenSymbol={tokenSymbol}
+          />
 
-      <ChargePanel
-        actionPolicyId={actionPolicyId}
-        actionState={policyActionState}
-        chargeAmount={chargeAmount}
-        chargePreview={
-          parsedChargeAmount !== undefined
-            ? formatTokenAmount(parsedChargeAmount, tokenDecimals, tokenSymbol)
-            : ''
-        }
-        disabledReason={writeDisabledReason}
-        isBusy={policyActionState.phase === 'pending'}
-        onActionPolicyIdChange={updateActionPolicyId}
-        onCharge={handleCharge}
-        onChargeAmountChange={updateChargeAmount}
-        onClearStatus={resetPolicyActionState}
-        onRevoke={handleRevoke}
-        onWithdraw={handleWithdraw}
-        onWithdrawAmountChange={updateWithdrawAmount}
-        onWithdrawReceiverChange={updateWithdrawReceiver}
-        tokenSymbol={tokenSymbol}
-        withdrawAmount={withdrawAmount}
-        withdrawPreview={
-          parsedWithdrawAmount !== undefined
-            ? formatTokenAmount(parsedWithdrawAmount, tokenDecimals, tokenSymbol)
-            : ''
-        }
-        withdrawReceiver={withdrawReceiver}
-      />
+          <ChargePanel
+            actionPolicyId={actionPolicyId}
+            actionState={policyActionState}
+            chargeAmount={chargeAmount}
+            chargePreview={
+              parsedChargeAmount !== undefined
+                ? formatTokenAmount(parsedChargeAmount, tokenDecimals, tokenSymbol)
+                : ''
+            }
+            disabledReason={writeDisabledReason}
+            isBusy={policyActionState.phase === 'pending'}
+            onActionPolicyIdChange={updateActionPolicyId}
+            onCharge={handleCharge}
+            onChargeAmountChange={updateChargeAmount}
+            onClearStatus={resetPolicyActionState}
+            onRevoke={handleRevoke}
+            onWithdraw={handleWithdraw}
+            onWithdrawAmountChange={updateWithdrawAmount}
+            onWithdrawReceiverChange={updateWithdrawReceiver}
+            tokenSymbol={tokenSymbol}
+            withdrawAmount={withdrawAmount}
+            withdrawPreview={
+              parsedWithdrawAmount !== undefined
+                ? formatTokenAmount(parsedWithdrawAmount, tokenDecimals, tokenSymbol)
+                : ''
+            }
+            withdrawReceiver={withdrawReceiver}
+          />
+        </div>
+      </section>
 
-      <EventTimeline
-        contractStatusDetail={timelineContractStatus.detail}
-        contractStatusLabel={timelineContractStatus.label}
-        contractStatusTone={timelineContractStatus.tone}
-        entries={timelineEntries}
-        lastActionLabel={lastActionState.message}
-        lastActionTone={lastActionState.tone}
-        loadState={timelineState}
-        onRefresh={() => {
-          void refreshEventTimeline();
-        }}
-      />
-    </>
+      <aside className="context-shell">
+        <div className="surface-heading context-heading">
+          <div>
+            <p className="section-kicker">Context and evidence</p>
+            <h2 className="surface-title">Keep readiness and proof adjacent.</h2>
+          </div>
+          <p className="surface-copy">
+            Wallet state, deployment readiness, and recent chain events stay next to the workflow
+            so the surface reads as one explainable product.
+          </p>
+        </div>
+
+        <div className="context-sections">
+          <WalletState
+            address={address}
+            allowance={formatTokenAmount(allowance, tokenDecimals, tokenSymbol)}
+            connectError={connectError ? getActionErrorMessage(connectError) : undefined}
+            connectionStatus={connectionStatus}
+            disableConnect={!selectedConnector}
+            isConnectPending={isConnectPending}
+            isConnected={isConnected}
+            isDisconnectPending={isDisconnectPending}
+            note={walletStateNote}
+            onConnect={handleConnect}
+            onDisconnect={() => disconnect()}
+            tokenBalance={formatTokenAmount(walletBalance, tokenDecimals, tokenSymbol)}
+            tokenLabel={tokenSymbol}
+            vaultBalance={formatTokenAmount(vaultBalance, tokenDecimals, tokenSymbol)}
+          />
+
+          <EventTimeline
+            contractStatusDetail={timelineContractStatus.detail}
+            contractStatusLabel={timelineContractStatus.label}
+            contractStatusTone={timelineContractStatus.tone}
+            entries={timelineEntries}
+            lastActionLabel={lastActionState.message}
+            lastActionTone={lastActionState.tone}
+            loadState={timelineState}
+            onRefresh={() => {
+              void refreshEventTimeline();
+            }}
+          />
+        </div>
+      </aside>
+    </section>
   );
 }
