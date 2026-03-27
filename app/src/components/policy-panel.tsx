@@ -71,14 +71,11 @@ export function PolicyPanel({
     <section className="workflow-panel">
       <div className="panel-header">
         <div>
-          <p className="panel-eyebrow">02 Create policy</p>
-          <h3 className="panel-title">Set the beneficiary, cap, and expiry</h3>
+          <p className="panel-eyebrow">02 Create</p>
+          <h3 className="panel-title">Set a policy</h3>
         </div>
       </div>
-      <p className="panel-intro">
-        The created policy id stays manual in this MVP, so it becomes the exact key for later reads
-        and actions.
-      </p>
+      <p className="panel-intro">Choose beneficiary, cap, and expiry.</p>
       <div className="form-row">
         <label className="label field-label" htmlFor="beneficiary">
           Beneficiary
@@ -92,7 +89,7 @@ export function PolicyPanel({
       </div>
       <div className="form-row">
         <label className="label field-label" htmlFor="cap">
-          Cap amount
+          Cap
         </label>
         <input
           id="cap"
@@ -108,7 +105,7 @@ export function PolicyPanel({
       </div>
       <div className="form-row">
         <label className="label field-label" htmlFor="expiry">
-          Expiry timestamp
+          Expiry
         </label>
         <input
           id="expiry"
@@ -119,8 +116,7 @@ export function PolicyPanel({
         />
       </div>
       <p className="note form-note">
-        {createDisabledReason ??
-          'Create is owner-side. The contract still decides whether the connected wallet can send it.'}
+        {createDisabledReason ?? 'Owner wallet required.'}
       </p>
       <div className="button-row">
         <button
@@ -142,7 +138,7 @@ export function PolicyPanel({
           disabled={createState.phase === 'idle'}
           onClick={onClearCreateState}
         >
-          Clear status
+          Clear
         </button>
       </div>
       {createState.phase !== 'idle' ? (
@@ -157,7 +153,7 @@ export function PolicyPanel({
       ) : null}
       {createdPolicyId ? (
         <div className="detail-row detail-row-stack detail-callout">
-          <span className="label">Last created policy id</span>
+          <span className="label">Policy id</span>
           <span className="value code small-value" title={createdPolicyId}>
             {shortAddress(createdPolicyId)}
           </span>
@@ -167,12 +163,12 @@ export function PolicyPanel({
       <div className="panel-divider" />
 
       <div className="subsection-header">
-        <p className="subsection-title">Inspect by policy id</p>
-        <p className="note">Read the exact state without adding a list or indexer.</p>
+        <p className="subsection-title">Inspect</p>
+        <p className="note">Load a policy by id.</p>
       </div>
       <div className="form-row">
         <label className="label field-label" htmlFor="lookup-policy-id">
-          Load policy by id
+          Policy id
         </label>
         <input
           id="lookup-policy-id"
@@ -182,8 +178,7 @@ export function PolicyPanel({
         />
       </div>
       <p className="note form-note">
-        {lookupDisabledReason ??
-          'Policy id is the MVP lookup key. Local RPC reads still work while the wallet is disconnected.'}
+        {lookupDisabledReason ?? 'Reads stay available without a connected wallet.'}
       </p>
       <button
         type="button"
@@ -191,7 +186,7 @@ export function PolicyPanel({
         disabled={Boolean(lookupDisabledReason) || isLookupBusy || !lookupPolicyId.trim()}
         onClick={onLoadPolicy}
       >
-        {isLookupBusy ? 'Loading…' : 'Load policy'}
+        {isLookupBusy ? 'Loading…' : 'Load'}
       </button>
       {lookupState.phase === 'loading' || lookupState.phase === 'error' ? (
         <div className={`status-box ${lookupState.phase === 'error' ? 'error' : 'pending'}`}>
@@ -201,7 +196,7 @@ export function PolicyPanel({
       {loadedPolicy && loadedPolicyId ? (
         <div className="detail-list">
           <div className="detail-row detail-row-stack">
-            <span className="label">Loaded policy id</span>
+            <span className="label">Policy id</span>
             <span className="value code small-value" title={loadedPolicyId}>
               {shortAddress(loadedPolicyId)}
             </span>

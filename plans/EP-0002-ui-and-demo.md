@@ -25,6 +25,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [ ] 2026-03-27T01:25:06Z M4.2 final browser-led QA reran `pnpm compile`, `pnpm abi:sync`, `pnpm web:build`, `pnpm deploy:local`, `pnpm seed:local`, and `pnpm demo:local`, but stopped before any UI edits because Playwright browser automation was blocked by an existing local Chrome session and the required viewport inspection could not be completed truthfully.
 - [ ] 2026-03-27T02:00:41Z M4.2 QA retry used the existing Chrome app on `http://localhost:3000`, trimmed first-viewport spacing in `globals.css`, added a same-origin `/api/rpc` proxy plus client-only wagmi transport for browser reads, and reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, but the live browser still settled into the `rpc-unavailable` fallback even though shell-side `/api/rpc` and direct node curls both succeeded, so ready-state and populated-timeline QA remain incomplete.
 - [x] 2026-03-27T02:08:42Z M4.2 final browser QA pass found the real runtime blocker: wagmi was registered against `localhost` chain id `1337` while the synced deploy and Hardhat node use `31337`, so `usePublicClient` never matched the configured chain in-browser. This pass switched the client config to the Hardhat chain, kept browser reads on same-origin `/api/rpc`, tightened form-meta stacking in `globals.css`, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and completed live browser checks at `1440x900`, `1280x800`, and `390x844` with `Demo ready`, disconnected-state copy, and populated timeline rows all rendering cleanly.
+- [x] 2026-03-27T12:18:00Z M4.2 final product-surface polish pass trimmed hero and panel copy into shorter wallet-style language, replaced implementation-heavy evidence wording with concise activity phrasing, softened the light surface chrome, refined the activity rows into receipt-style entries, removed `.tmp-qa` from the worktree, added `.tmp-qa/` to `.gitignore`, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and completed live browser QA at `1440x900`, `1280x800`, and `390x844` with populated activity and no horizontal overflow.
 
 ## Surprises & Discoveries
 
@@ -50,6 +51,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - On this Next.js dev setup, `127.0.0.1:3000` is not an interchangeable QA host for `localhost:3000`: the dev log showed blocked cross-origin HMR and router-initialization errors on `127.0.0.1`, so browser QA should use `http://localhost:3000`.
 - Even after switching the browser-side public client to a same-origin `/api/rpc` proxy and confirming that `curl http://localhost:3000/api/rpc` plus a standalone viem `getCode` call succeeded, the live dashboard still rendered the `rpc-unavailable` fallback in-browser, which points to a deeper browser/runtime issue than simple transport reachability.
 - The deeper browser/runtime issue turned out to be chain identity, not transport reachability: wagmi's built-in `localhost` chain is `1337`, while the Hardhat node and synced deployment artifact are `31337`, so browser-side `usePublicClient({ chainId: 31337 })` never matched until the config switched to the Hardhat chain.
+- This final polish pass exposed a different browser/runtime wrinkle: an older `next-server` process was still serving stale server-rendered `page.tsx` masthead HTML on port `3000`, so the live QA pass had to restart `pnpm web:dev` before the hero changes rendered truthfully in the browser.
 
 ## Decision Log
 
@@ -85,6 +87,8 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - 2026-03-27T01:25:06Z: The final QA stop condition is strict: if Playwright cannot control Chrome because of an existing local browser session, record the block, make no speculative UI edits, and stop instead of claiming reviewer-ready viewport validation.
 - 2026-03-27T02:00:41Z: Browser QA on this repo should use `http://localhost:3000`, not `http://127.0.0.1:3000`, and the only frontend/runtime broadening allowed in this pass was plumbing that keeps browser JSON-RPC reads same-origin and explainable. If the page still settles into `rpc-unavailable` after that, stop and report the runtime risk instead of continuing into deeper infrastructure work.
 - 2026-03-27T02:08:42Z: Keep the browser client wired to the Hardhat `31337` chain, not wagmi's separate `localhost` `1337` preset, because the synced deployment artifact, wallet guidance, and readiness probe all assume the Hardhat chain id. Once the chain match is correct, final QA should stay visual and presentation-level only.
+- 2026-03-27T12:08:00Z: This final M4.2 pass stays presentation-only. Remove implementation-explainer copy from the visible product surface, keep the hero and workflow reading like one concise wallet operation flow, polish the activity rail into receipt-style evidence, and clean `.tmp-qa` out of the worktree while leaving tracked repo-policy files alone.
+- 2026-03-27T12:18:00Z: Keep the final polish centered on language, hierarchy, and evidence styling rather than new features. It is acceptable to restart a stale local dev server when needed for truthful browser QA, but leave contract, script, ABI, and tracked repo-policy files otherwise untouched.
 
 ## Context and Orientation
 
@@ -304,6 +308,16 @@ and stable readiness-effect dependencies landed, while shell-side curls and a st
 `getCode` call through `/api/rpc` both succeeded. The exact next step remains a focused browser
 runtime investigation for the localhost read path before claiming ready-state or populated-timeline
 QA is complete.
+
+This final M4.2 product-surface pass is now complete. The visible dashboard copy is materially
+shorter and more product-facing: the masthead now leads with the PolicyVault name plus a concise
+fund/create/use flow cue, the workflow surface titles read like direct wallet actions instead of
+demo narration, and the context rail keeps balances, readiness, and activity present without
+explaining the implementation. `app/src/lib/events.ts` now formats recent entries as compact
+receipt-style activity rows with short timestamps and lighter metadata, while `globals.css`
+softens the light surfaces, trims copy density, and keeps the first viewport composed on desktop
+and mobile. Repo hygiene is cleaner too: `.tmp-qa` is now ignored and removed from the worktree.
+The exact next submilestone remains M4.2 screenshots and runbook polish.
 supporting button hierarchy, denser and shorter helper copy, cleaner focus and disabled states,
 more graceful address and hash presentation, and a more legible status-plus-timeline surface.
 `app/src/app/globals.css` now carries the refined control, spacing, status, and timeline rhythm,

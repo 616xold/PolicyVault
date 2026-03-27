@@ -1,6 +1,11 @@
 import { type PublicClient } from 'viem';
 
-import { formatCompactTimestamp, formatTokenAmount, shortAddress } from './format.js';
+import {
+  formatActivityTimestamp,
+  formatCompactTimestamp,
+  formatTokenAmount,
+  shortAddress,
+} from './format.js';
 import { PolicyVaultAbi } from './generated/abi.js';
 
 const TIMELINE_BLOCK_WINDOW = 2_000n;
@@ -23,6 +28,7 @@ export type TimelineEntry = {
   key: string;
   kind: TimelineEntryKind;
   metadata: string;
+  stamp: string;
   summary: string;
   title: string;
 };
@@ -106,16 +112,8 @@ function hasConfirmedOrdering(
   );
 }
 
-function buildMetadata(
-  record: TimelineRecord,
-  blockTimestamp: bigint | undefined,
-  extraDetail?: string,
-): string {
-  const parts = [
-    formatCompactTimestamp(blockTimestamp),
-    `Tx ${shortAddress(record.transactionHash)}`,
-    `#${record.blockNumber.toString()}`,
-  ];
+function buildMetadata(record: TimelineRecord, extraDetail?: string): string {
+  const parts = [`Tx ${shortAddress(record.transactionHash)}`];
 
   if (extraDetail) {
     parts.push(extraDetail);
@@ -154,45 +152,50 @@ function formatTimelineRecord(
         blockNumber: record.blockNumber,
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
-        metadata: buildMetadata(record, blockTimestamp),
-        summary: `From ${shortAddress(record.owner)}. Vault balance ${tokenAmount(record.newVaultBalance)}.`,
-        title: `${tokenAmount(record.amount)} deposited`,
+        metadata: buildMetadata(record),
+        stamp: formatActivityTimestamp(blockTimestamp),
+        summary: `Owner ${shortAddress(record.owner)}. Vault balance ${tokenAmount(record.newVaultBalance)}.`,
+        title: `Funded ${tokenAmount(record.amount)}`,
       };
     case 'policy-created':
       return {
         blockNumber: record.blockNumber,
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
-        metadata: buildMetadata(record, blockTimestamp, `Policy ${shortAddress(record.policyId)}`),
-        summary: `Cap ${tokenAmount(record.cap)}. Expires ${formatCompactTimestamp(record.expiresAt)} for ${shortAddress(record.beneficiary)}.`,
-        title: `Policy created for ${shortAddress(record.beneficiary)}`,
+        metadata: buildMetadata(record, `Policy ${shortAddress(record.policyId)}`),
+        stamp: formatActivityTimestamp(blockTimestamp),
+        summary: `Cap ${tokenAmount(record.cap)}. Expires ${formatCompactTimestamp(record.expiresAt)}.`,
+        title: `Policy for ${shortAddress(record.beneficiary)}`,
       };
     case 'charge':
       return {
         blockNumber: record.blockNumber,
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
-        metadata: buildMetadata(record, blockTimestamp, `Policy ${shortAddress(record.policyId)}`),
-        summary: `${shortAddress(record.beneficiary)} charged ${shortAddress(record.owner)}. Spent ${tokenAmount(record.spent)}. Remaining ${tokenAmount(record.remaining)}.`,
-        title: `${tokenAmount(record.amount)} charged`,
+        metadata: buildMetadata(record, `Policy ${shortAddress(record.policyId)}`),
+        stamp: formatActivityTimestamp(blockTimestamp),
+        summary: `${tokenAmount(record.remaining)} left after ${tokenAmount(record.spent)} spent.`,
+        title: `Charged ${tokenAmount(record.amount)}`,
       };
     case 'policy-revoked':
       return {
         blockNumber: record.blockNumber,
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
-        metadata: buildMetadata(record, blockTimestamp, `Policy ${shortAddress(record.policyId)}`),
-        summary: `${shortAddress(record.owner)} closed ${shortAddress(record.beneficiary)}'s spend path.`,
-        title: 'Policy revoked',
+        metadata: buildMetadata(record, `Policy ${shortAddress(record.policyId)}`),
+        stamp: formatActivityTimestamp(blockTimestamp),
+        summary: `${shortAddress(record.beneficiary)} can no longer charge.`,
+        title: 'Revoked policy',
       };
     case 'withdraw':
       return {
         blockNumber: record.blockNumber,
         key: `${record.transactionHash}-${record.logIndex}`,
         kind: record.kind,
-        metadata: buildMetadata(record, blockTimestamp),
+        metadata: buildMetadata(record),
+        stamp: formatActivityTimestamp(blockTimestamp),
         summary: `Sent to ${shortAddress(record.receiver)}. Vault balance ${tokenAmount(record.newVaultBalance)}.`,
-        title: `${tokenAmount(record.amount)} withdrawn`,
+        title: `Withdrew ${tokenAmount(record.amount)}`,
       };
   }
 }

@@ -4,8 +4,8 @@
 export const generatedAddresses = {
   localhost: {
     chainId: 31337,
-    mockUsdc: '0xb7f8bc63bbcad18155201308c8f3540b07f84f5e' as `0x${string}`,
-    policyVault: '0xa51c1fc2f0d1a1b8494ed1fe312d7c3a78ed91c0' as `0x${string}`,
+    mockUsdc: '0x5fbdb2315678afecb367f032d93f642f64180aa3' as `0x${string}`,
+    policyVault: '0xe7f1725e7734ce288f8367e1bb143e90bb3f0512' as `0x${string}`,
   },
 } as const;
 

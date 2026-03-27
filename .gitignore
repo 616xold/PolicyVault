@@ -23,6 +23,7 @@ app/out
 # misc
 dist
 build
+.tmp-qa/
 .DS_Store
 *.log
 *.tsbuildinfo

@@ -41,8 +41,8 @@ export function WalletState({
     <section className="context-panel wallet-panel">
       <div className="panel-header">
         <div>
-          <p className="panel-eyebrow">Context</p>
-          <h3 className="panel-title">Wallet and vault state</h3>
+          <p className="panel-eyebrow">Wallet</p>
+          <h3 className="panel-title">Balances and access</h3>
         </div>
         <span className={`tag status-tag ${isConnected ? 'status-live' : 'status-muted'}`}>
           {connectionStatus}
@@ -66,7 +66,7 @@ export function WalletState({
 
       <div className="detail-list">
         <div className="detail-row detail-row-stack">
-          <span className="label">Connected address</span>
+          <span className="label">Address</span>
           <span className="value code small-value" title={address}>
             {addressLabel}
           </span>

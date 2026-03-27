@@ -49,17 +49,6 @@ import {
 } from '../lib/policy.js';
 import { contractConfig, mockUsdcContract, policyVaultContract } from '../lib/contracts.js';
 
-function describeAddressSource() {
-  switch (contractConfig.addressSource) {
-    case 'generated-localhost':
-      return 'Using generated localhost deployment addresses.';
-    case 'env-fallback':
-      return 'Using env fallback contract addresses.';
-    default:
-      return 'No synced contract addresses yet.';
-  }
-}
-
 function describeMissingContracts(missingContracts: MissingContractCodeTarget[]) {
   if (missingContracts.length === 0) {
     return 'MockUSDC and PolicyVault';
@@ -91,7 +80,7 @@ type LastActionState = {
 
 const initialTimelineState: TimelineLoadState = {
   phase: 'idle',
-  message: 'Timeline will read recent PolicyVault logs directly from the configured public client.',
+  message: 'Waiting for activity.',
 };
 
 export function VaultDashboard() {
@@ -121,7 +110,7 @@ export function VaultDashboard() {
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [timelineState, setTimelineState] = useState<TimelineLoadState>(initialTimelineState);
   const [lastActionState, setLastActionState] = useState<LastActionState>({
-    message: 'No confirmed write yet.',
+    message: 'Awaiting first write.',
     tone: 'muted',
   });
   const [contractReadiness, setContractReadiness] =
@@ -213,7 +202,6 @@ export function VaultDashboard() {
     })();
   }, [publicClient]);
 
-  const tokenName = tokenMetadata.data?.[0] ?? fundingTokenDefaults.name;
   const tokenSymbol = tokenMetadata.data?.[1] ?? fundingTokenDefaults.symbol;
   const tokenDecimals = tokenMetadata.data?.[2] ?? fundingTokenDefaults.decimals;
   const walletBalance = accountReads.data?.[0];
@@ -263,13 +251,13 @@ export function VaultDashboard() {
 
   const readinessBlocker =
     contractReadiness.kind === 'missing-addresses'
-      ? 'Run pnpm deploy:local, then pnpm abi:sync.'
+      ? 'Sync a local deploy first.'
       : contractReadiness.kind === 'rpc-unavailable'
-        ? 'Local RPC offline. Start pnpm node.'
+        ? 'Start the local node.'
         : contractReadiness.kind === 'checking-contracts'
-          ? 'Checking contract bytecode at the configured addresses.'
+          ? 'Checking vault availability.'
           : contractReadiness.kind === 'missing-bytecode'
-            ? `Configured addresses found, but no bytecode is deployed at ${describeMissingContracts(contractReadiness.missingContracts)}. Re-run pnpm deploy:local and pnpm abi:sync on this node.`
+            ? `${describeMissingContracts(contractReadiness.missingContracts)} missing on this node. Redeploy and sync.`
             : undefined;
 
   const readDisabledReason = readinessBlocker;
@@ -277,15 +265,15 @@ export function VaultDashboard() {
   const writeDisabledReason = readinessBlocker
     ? readinessBlocker
     : !isConnected
-      ? 'Connect a wallet to send PolicyVault writes.'
+      ? 'Connect a wallet to continue.'
       : !isExpectedChain
-        ? `Switch the wallet to localhost (${contractConfig.chainId}).`
+        ? `Switch to local chain (${contractConfig.chainId}).`
         : !walletClient
-          ? 'Unlock the connected wallet to prepare transactions.'
+          ? 'Unlock wallet to continue.'
           : tokenMetadata.isPending
-            ? 'Loading token metadata.'
+            ? 'Loading token info.'
             : tokenMetadata.error
-              ? `Token reads failed: ${getActionErrorMessage(tokenMetadata.error)}`
+              ? `Token read failed: ${getActionErrorMessage(tokenMetadata.error)}`
               : undefined;
 
   const allowanceCoversAmount =
@@ -303,12 +291,12 @@ export function VaultDashboard() {
         phase: 'idle',
         message:
           contractReadiness.kind === 'missing-addresses'
-            ? 'Run pnpm deploy:local and pnpm abi:sync first so the UI knows which PolicyVault to read.'
+            ? 'Sync a local deploy to load activity.'
             : contractReadiness.kind === 'rpc-unavailable'
-              ? 'Start pnpm node so the dashboard can read recent PolicyVault logs.'
+              ? 'Start the local node to load activity.'
               : contractReadiness.kind === 'checking-contracts'
-                ? 'Checking deployed contract bytecode before reading recent PolicyVault logs.'
-                : `Configured addresses were found, but no bytecode is deployed at ${describeMissingContracts(contractReadiness.missingContracts)}.`,
+                ? 'Checking vault availability.'
+                : `${describeMissingContracts(contractReadiness.missingContracts)} missing on this node.`,
       });
       return;
     }
@@ -318,7 +306,7 @@ export function VaultDashboard() {
       setTimelineEntries([]);
       setTimelineState({
         phase: 'idle',
-        message: 'Start pnpm node so the dashboard can read recent PolicyVault logs.',
+        message: 'Start the local node to load activity.',
       });
       return;
     }
@@ -326,7 +314,7 @@ export function VaultDashboard() {
     if (showLoading) {
       setTimelineState({
         phase: 'loading',
-        message: 'Refreshing recent PolicyVault events.',
+        message: 'Refreshing activity.',
       });
     }
 
@@ -346,8 +334,8 @@ export function VaultDashboard() {
         phase: 'success',
         message:
           nextEntries.length > 0
-            ? `Showing the ${nextEntries.length} most recent PolicyVault events in chain order.`
-            : 'No PolicyVault events yet. Deposit or create a policy to start the story.',
+            ? `Showing ${nextEntries.length} recent events.`
+            : 'No activity yet.',
       });
     } catch (error) {
       if (requestId !== timelineRequestIdRef.current) {
@@ -394,7 +382,7 @@ export function VaultDashboard() {
       if (announce) {
         setPolicyLookupState({
           phase: 'loading',
-          message: 'Loading policy state.',
+          message: 'Loading policy.',
         });
       }
 
@@ -641,15 +629,15 @@ export function VaultDashboard() {
       await reader.waitForTransactionReceipt({ hash: depositHash });
       await refreshDashboardReads();
 
-      setFundingActionState({
-        phase: 'success',
-        mode: 'approve',
-        message: approvalWasSent ? 'Approval and deposit confirmed.' : 'Deposit confirmed.',
-        txHash: depositHash,
-      });
+        setFundingActionState({
+          phase: 'success',
+          mode: 'approve',
+          message: approvalWasSent ? 'Approval complete. Vault funded.' : 'Vault funded.',
+          txHash: depositHash,
+        });
       recordLastAction(
         'live',
-        approvalWasSent ? 'Approval and deposit confirmed.' : 'Deposit confirmed.',
+        approvalWasSent ? 'Approval complete. Vault funded.' : 'Vault funded.',
         depositHash,
       );
     } catch (error) {
@@ -736,10 +724,10 @@ export function VaultDashboard() {
       setFundingActionState({
         phase: 'success',
         mode: 'permit',
-        message: 'Permit deposit confirmed.',
+        message: 'Permit complete. Vault funded.',
         txHash: depositHash,
       });
-      recordLastAction('live', 'Permit deposit confirmed.', depositHash);
+      recordLastAction('live', 'Permit complete. Vault funded.', depositHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
       const message = getActionErrorMessage(error);
@@ -794,10 +782,10 @@ export function VaultDashboard() {
       setCreatePolicyState({
         phase: 'success',
         action: 'create',
-        message: 'Policy created and loaded.',
+        message: 'Policy created.',
         txHash: createHash,
       });
-      recordLastAction('live', 'Policy created and loaded.', createHash);
+      recordLastAction('live', 'Policy created.', createHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
       const message = getActionErrorMessage(error);
@@ -850,10 +838,10 @@ export function VaultDashboard() {
       setPolicyActionState({
         phase: 'success',
         action: 'charge',
-        message: 'Charge confirmed and policy refreshed.',
+        message: 'Charge confirmed.',
         txHash: chargeHash,
       });
-      recordLastAction('live', 'Charge confirmed and policy refreshed.', chargeHash);
+      recordLastAction('live', 'Charge confirmed.', chargeHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
       const message = getActionErrorMessage(error);
@@ -901,10 +889,10 @@ export function VaultDashboard() {
       setPolicyActionState({
         phase: 'success',
         action: 'revoke',
-        message: 'Policy revoked and refreshed.',
+        message: 'Policy revoked.',
         txHash: revokeHash,
       });
-      recordLastAction('live', 'Policy revoked and refreshed.', revokeHash);
+      recordLastAction('live', 'Policy revoked.', revokeHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
       const message = getActionErrorMessage(error);
@@ -952,10 +940,10 @@ export function VaultDashboard() {
       setPolicyActionState({
         phase: 'success',
         action: 'withdraw',
-        message: 'Withdraw confirmed.',
+        message: 'Funds withdrawn.',
         txHash: withdrawHash,
       });
-      recordLastAction('live', 'Withdraw confirmed.', withdrawHash);
+      recordLastAction('live', 'Funds withdrawn.', withdrawHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
       const message = getActionErrorMessage(error);
@@ -980,51 +968,48 @@ export function VaultDashboard() {
 
   const walletStateNote =
     contractReadiness.kind === 'missing-addresses'
-      ? 'Run pnpm deploy:local and pnpm abi:sync to materialize the local contract addresses.'
+      ? 'Sync a local deploy to continue.'
       : contractReadiness.kind === 'rpc-unavailable'
-        ? 'The local JSON-RPC client is unavailable or not responding. Start pnpm node.'
+        ? 'Start the local node.'
         : contractReadiness.kind === 'checking-contracts'
-          ? 'Configured addresses found. Checking whether MockUSDC and PolicyVault bytecode is on this node.'
+          ? 'Checking vault availability.'
           : contractReadiness.kind === 'missing-bytecode'
-            ? `Configured addresses exist, but ${describeMissingContracts(contractReadiness.missingContracts)} has no deployed bytecode on this node. Re-run pnpm deploy:local and pnpm abi:sync.`
+            ? `${describeMissingContracts(contractReadiness.missingContracts)} missing on this node. Redeploy and sync.`
             : !isConnected
-              ? 'Connect the owner or beneficiary wallet to read balances and send policy actions.'
+              ? 'Connect owner or beneficiary wallet.'
               : !isExpectedChain
-                ? `Switch the wallet to localhost (${contractConfig.chainId}) to read the local vault state.`
+                ? `Switch to local chain (${contractConfig.chainId}).`
                 : accountReads.error
-                  ? `Funding reads failed: ${getActionErrorMessage(accountReads.error)}`
-                  : `${describeAddressSource()} Vault ${shortAddress(policyVaultContract.address)}.`;
+                  ? `Balance reads failed: ${getActionErrorMessage(accountReads.error)}`
+                  : `Vault ready at ${shortAddress(policyVaultContract.address)}.`;
 
   const timelineContractStatus =
     contractReadiness.kind === 'missing-addresses'
       ? {
-          detail:
-            'The UI is missing a synced localhost deploy, so recent PolicyVault logs cannot be read yet.',
+          detail: 'Sync a local deploy to load activity.',
           label: 'Missing local deploy',
           tone: 'warning' as const,
         }
       : contractReadiness.kind === 'rpc-unavailable'
         ? {
-            detail:
-              'Configured addresses exist, but the local RPC is offline or not responding. Start pnpm node to read logs.',
+            detail: 'Start the local node to load activity.',
             label: 'RPC offline',
             tone: 'warning' as const,
           }
         : contractReadiness.kind === 'checking-contracts'
           ? {
-              detail:
-                'Configured addresses were found. The dashboard is checking that MockUSDC and PolicyVault bytecode is actually deployed on this node.',
+              detail: 'Checking vault availability.',
               label: 'Checking contracts',
               tone: 'muted' as const,
             }
           : contractReadiness.kind === 'missing-bytecode'
             ? {
-                detail: `${describeMissingContracts(contractReadiness.missingContracts)} has no deployed bytecode at the configured address on this node. Re-run pnpm deploy:local and pnpm abi:sync.`,
+                detail: `${describeMissingContracts(contractReadiness.missingContracts)} missing on this node. Redeploy and sync.`,
                 label: 'No contract code',
                 tone: 'warning' as const,
               }
             : {
-                detail: `${describeAddressSource()} Recent events are read directly from PolicyVault without an indexer.`,
+                detail: 'Vault ready. Activity updates here.',
                 label: 'Demo ready',
                 tone: 'live' as const,
               };
@@ -1032,23 +1017,20 @@ export function VaultDashboard() {
   const allowanceHint = depositAmountError
     ? depositAmountError
     : parsedDepositAmount === undefined
-      ? 'Approve sends an ERC-20 approval when needed. Permit signs once and deposits in one write.'
+      ? 'Approval if needed. Permit funds in one signature.'
       : allowanceCoversAmount
-        ? 'Allowance already covers this amount.'
-        : 'This amount still needs approval before deposit.';
+        ? 'Ready to fund this amount.'
+        : 'Approval required for this amount.';
 
   return (
     <section className="workspace-grid">
       <section className="workflow-shell">
         <div className="surface-heading">
           <div>
-            <p className="section-kicker">Working surface</p>
-            <h2 className="surface-title">Run the bounded spend flow in order.</h2>
+            <p className="section-kicker">Workflow</p>
+            <h2 className="surface-title">Fund, create, and use.</h2>
           </div>
-          <p className="surface-copy">
-            Fund the vault, create the policy, then charge, revoke, or withdraw against live local
-            reads. The UI stays manual on purpose so the contract story remains easy to explain.
-          </p>
+          <p className="surface-copy">Move funds in, set a policy, then operate it.</p>
         </div>
 
         <div className="workflow-panels">
@@ -1066,7 +1048,6 @@ export function VaultDashboard() {
             onAmountChange={updateDepositAmount}
             onApproveDeposit={handleApproveDeposit}
             onPermitDeposit={handlePermitDeposit}
-            tokenName={tokenName}
             tokenSymbol={tokenSymbol}
             walletBalance={formatTokenAmount(walletBalance, tokenDecimals, tokenSymbol)}
           />
@@ -1135,13 +1116,10 @@ export function VaultDashboard() {
       <aside className="context-shell">
         <div className="surface-heading context-heading">
           <div>
-            <p className="section-kicker">Context and evidence</p>
-            <h2 className="surface-title">Keep readiness and proof adjacent.</h2>
+            <p className="section-kicker">Overview</p>
+            <h2 className="surface-title">Wallet, status, activity.</h2>
           </div>
-          <p className="surface-copy">
-            Wallet state, deployment readiness, and recent chain events stay next to the workflow so
-            the surface reads as one explainable product.
-          </p>
+          <p className="surface-copy">Balances, readiness, and recent receipts.</p>
         </div>
 
         <div className="context-sections">

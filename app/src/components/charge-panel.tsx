@@ -61,17 +61,14 @@ export function ChargePanel({
     <section className="workflow-panel">
       <div className="panel-header">
         <div>
-          <p className="panel-eyebrow">03 Operate policy</p>
-          <h3 className="panel-title">Charge, revoke, or withdraw</h3>
+          <p className="panel-eyebrow">03 Use</p>
+          <h3 className="panel-title">Charge or unwind</h3>
         </div>
       </div>
-      <p className="panel-intro">
-        Charge stays beneficiary-side. Revoke and withdraw stay owner-side. Wrong-actor attempts
-        remain visible as contract results instead of disappearing buttons.
-      </p>
+      <p className="panel-intro">Beneficiary charges. Owner revokes and withdraws.</p>
       <div className="subsection-header">
-        <p className="subsection-title">Charge or revoke a policy</p>
-        <p className="note">Use the same policy id for both actions.</p>
+        <p className="subsection-title">Policy actions</p>
+        <p className="note">Use one policy id for charge or revoke.</p>
       </div>
       <div className="form-row">
         <label className="label field-label" htmlFor="policy-id">
@@ -101,8 +98,7 @@ export function ChargePanel({
         </div>
       </div>
       <p className="note form-note">
-        {disabledReason ??
-          'Charge is beneficiary-only. Revoke still stays visible so the contract result can be narrated directly.'}
+        {disabledReason ?? 'Charge with the beneficiary wallet.'}
       </p>
       <div className="button-row">
         <button
@@ -131,8 +127,8 @@ export function ChargePanel({
       <div className="panel-divider" />
 
       <div className="subsection-header">
-        <p className="subsection-title">Withdraw unused funds</p>
-        <p className="note">Send the remaining vault balance to an explicit receiver.</p>
+        <p className="subsection-title">Withdraw balance</p>
+        <p className="note">Send unused funds to a receiver.</p>
       </div>
       <div className="form-row">
         <label className="label field-label" htmlFor="withdraw-amount">
@@ -152,7 +148,7 @@ export function ChargePanel({
       </div>
       <div className="form-row">
         <label className="label field-label" htmlFor="withdraw-receiver">
-          Receiver address
+          Receiver
         </label>
         <input
           id="withdraw-receiver"
@@ -162,9 +158,7 @@ export function ChargePanel({
         />
       </div>
       <p className="note form-note">
-        {disabledReason
-          ? 'Withdraw stays unavailable until the dashboard is ready.'
-          : 'Withdraw uses the connected owner wallet and the explicit receiver address.'}
+        {disabledReason ?? 'Withdraw with the owner wallet.'}
       </p>
       <div className="button-row">
         <button
@@ -185,7 +179,7 @@ export function ChargePanel({
           disabled={actionState.phase === 'idle'}
           onClick={onClearStatus}
         >
-          Clear status
+          Clear
         </button>
       </div>
       {actionState.phase !== 'idle' ? (

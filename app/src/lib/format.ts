@@ -26,6 +26,24 @@ function formatUtcDate(value: bigint | undefined) {
   return `${year}-${month}-${day} ${hours}:${minutes} UTC`;
 }
 
+function formatUtcTime(value: bigint | undefined) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const seconds = value.toString();
+  const numericSeconds = Number(seconds);
+  if (!Number.isSafeInteger(numericSeconds)) {
+    return undefined;
+  }
+
+  const date = new Date(numericSeconds * 1000);
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+
+  return `${hours}:${minutes} UTC`;
+}
+
 export function formatTokenAmount(
   value: bigint | undefined,
   decimals: number,
@@ -62,4 +80,12 @@ export function formatCompactTimestamp(value: bigint | undefined): string {
   }
 
   return formatUtcDate(value) ?? `${value.toString()} (unix)`;
+}
+
+export function formatActivityTimestamp(value: bigint | undefined): string {
+  if (value === undefined) {
+    return '--';
+  }
+
+  return formatUtcTime(value) ?? formatCompactTimestamp(value);
 }

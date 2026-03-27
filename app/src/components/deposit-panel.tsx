@@ -13,7 +13,6 @@ type DepositPanelProps = {
   onAmountChange: (value: string) => void;
   onApproveDeposit: () => void;
   onPermitDeposit: () => void;
-  tokenName: string;
   tokenSymbol: string;
   walletBalance: string;
 };
@@ -28,7 +27,6 @@ export function DepositPanel({
   onAmountChange,
   onApproveDeposit,
   onPermitDeposit,
-  tokenName,
   tokenSymbol,
   walletBalance,
 }: DepositPanelProps) {
@@ -49,16 +47,14 @@ export function DepositPanel({
     <section className="workflow-panel">
       <div className="panel-header">
         <div>
-          <p className="panel-eyebrow">01 Fund vault</p>
-          <h3 className="panel-title">Move {tokenSymbol} into PolicyVault</h3>
+          <p className="panel-eyebrow">01 Fund</p>
+          <h3 className="panel-title">Add vault balance</h3>
         </div>
       </div>
-      <p className="panel-intro">
-        Choose approval or permit, then land in the same vault balance with the same receipt trail.
-      </p>
+      <p className="panel-intro">Deposit with approval or permit.</p>
       <div className="form-row">
         <label className="label field-label" htmlFor="deposit-amount">
-          Deposit amount
+          Amount
         </label>
         <input
           id="deposit-amount"
@@ -87,7 +83,7 @@ export function DepositPanel({
         >
           {isBusy && actionState.phase === 'pending' && actionState.mode === 'approve'
             ? 'Processing…'
-            : 'Approve + deposit'}
+            : 'Approve + fund'}
         </button>
         <button
           type="button"
@@ -95,7 +91,7 @@ export function DepositPanel({
           disabled={Boolean(disabledReason) || isBusy || !amount.trim()}
           onClick={onPermitDeposit}
         >
-          Permit + deposit
+          Permit + fund
         </button>
       </div>
       {actionState.phase !== 'idle' ? (
@@ -108,9 +104,6 @@ export function DepositPanel({
           ) : null}
         </div>
       ) : null}
-      <p className="note meta-note">
-        Keep {tokenName} explicit so the approve-versus-permit trade-off stays easy to narrate.
-      </p>
     </section>
   );
 }

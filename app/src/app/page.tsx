@@ -5,16 +5,17 @@ export default function Page() {
     <main className="app-shell">
       <section className="masthead">
         <div className="masthead-copy">
-          <p className="eyebrow">Bounded ERC-20 spending surface</p>
+          <p className="eyebrow">Bounded spend</p>
           <h1>PolicyVault</h1>
           <p className="masthead-lede">
-            Fund a dedicated vault, create a beneficiary policy with a cap and expiry, and operate
-            the full spend path against live on-chain state.
+            Fund a vault, set a spend policy, and keep repeat charges inside clear limits.
           </p>
         </div>
-        <p className="masthead-meta">
-          MockUSDC on localhost. Manual policy ids. Direct event evidence.
-        </p>
+        <div aria-label="PolicyVault flow" className="masthead-flow">
+          <span>Fund</span>
+          <span>Create</span>
+          <span>Use</span>
+        </div>
       </section>
       <VaultDashboard />
     </main>
