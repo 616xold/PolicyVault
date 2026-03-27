@@ -38,6 +38,12 @@ That readiness probe checks both configured addresses with `getCode`, so the app
 difference between "no synced deploy yet" and "saved addresses exist, but this fresh localhost node
 does not have those contracts deployed."
 
+In the browser, the wagmi public client now talks to a same-origin Next route at `/api/rpc`, and
+that route forwards JSON-RPC calls to `projectConfig.rpcUrl`. The wagmi chain registration uses
+Hardhat chain id `31337`, which matches the synced localhost deployment artifact instead of
+wagmi's separate `localhost` id `1337`. This keeps localhost reads and event queries out of
+browser CORS and private-network edge cases while leaving the local node URL itself unchanged.
+
 ## Reads
 
 - generated address availability

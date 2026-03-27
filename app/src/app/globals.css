@@ -182,22 +182,22 @@ input:disabled {
 main.app-shell {
   width: min(1400px, calc(100% - 32px));
   margin: 0 auto;
-  padding: clamp(24px, 3vw, 44px) 0 48px;
+  padding: clamp(18px, 2.4vw, 32px) 0 40px;
   display: grid;
-  gap: clamp(24px, 3vw, 36px);
+  gap: clamp(18px, 2.2vw, 28px);
 }
 
 .masthead {
   display: grid;
-  gap: 18px;
-  padding-bottom: clamp(18px, 2vw, 28px);
+  gap: 12px;
+  padding-bottom: clamp(14px, 1.6vw, 22px);
   border-bottom: 1px solid var(--hairline);
   animation: lift-in 520ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .masthead-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .eyebrow,
@@ -227,7 +227,7 @@ main.app-shell {
 
 .masthead h1 {
   margin: 0;
-  font-size: clamp(3.5rem, 9vw, 6.8rem);
+  font-size: clamp(3.2rem, 8vw, 5.9rem);
   line-height: 0.92;
   letter-spacing: -0.08em;
   font-weight: 600;
@@ -235,10 +235,10 @@ main.app-shell {
 
 .masthead-lede {
   margin: 0;
-  max-width: 44rem;
+  max-width: 40rem;
   color: var(--muted-text);
-  font-size: clamp(1rem, 1.4vw, 1.16rem);
-  line-height: 1.65;
+  font-size: clamp(0.98rem, 1.25vw, 1.08rem);
+  line-height: 1.5;
 }
 
 .masthead-meta {
@@ -267,15 +267,15 @@ main.app-shell {
 
 .surface-heading {
   display: grid;
-  gap: 12px;
-  padding: 30px 30px 22px;
+  gap: 10px;
+  padding: 24px 26px 18px;
   border-bottom: 1px solid var(--hairline);
 }
 
 .surface-title {
-  margin: 8px 0 0;
-  font-size: clamp(1.4rem, 2vw, 2rem);
-  line-height: 1.08;
+  margin: 6px 0 0;
+  font-size: clamp(1.32rem, 1.8vw, 1.82rem);
+  line-height: 1.02;
   letter-spacing: -0.05em;
 }
 
@@ -300,7 +300,7 @@ main.app-shell {
   display: grid;
   align-content: start;
   gap: 16px;
-  padding: 28px 26px 30px;
+  padding: 22px 22px 24px;
 }
 
 .workflow-panel + .workflow-panel {
@@ -314,7 +314,7 @@ main.app-shell {
 .context-panel {
   display: grid;
   gap: 16px;
-  padding: 24px 26px 28px;
+  padding: 20px 22px 22px;
 }
 
 .panel-header {
@@ -431,12 +431,16 @@ main.app-shell {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.detail-row,
-.inline-meta {
+.detail-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+}
+
+.inline-meta {
+  display: grid;
+  gap: 4px;
 }
 
 .detail-row-stack {
@@ -687,8 +691,12 @@ main.app-shell {
     width: min(100%, calc(100% - 24px));
   }
 
+  .masthead h1 {
+    font-size: clamp(2.8rem, 15vw, 4.4rem);
+  }
+
   .surface-heading {
-    padding: 24px 22px 20px;
+    padding: 20px 20px 16px;
   }
 
   .workflow-panels {
@@ -696,7 +704,7 @@ main.app-shell {
   }
 
   .workflow-panel {
-    padding: 24px 22px 26px;
+    padding: 20px;
   }
 
   .workflow-panel + .workflow-panel {
@@ -705,7 +713,7 @@ main.app-shell {
   }
 
   .context-panel {
-    padding: 22px;
+    padding: 20px;
   }
 
   .stats-grid,

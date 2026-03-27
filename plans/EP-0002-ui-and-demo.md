@@ -22,6 +22,9 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-26T23:07:57Z M4.1 rewrite the README for reviewer-facing accuracy, sync the local-dev and demo docs to the real current UI and script flow, make the tracked-file policy explicit, and keep runtime code unchanged.
 - [x] 2026-03-27T01:00:03Z M4.2 reshape the localhost UI into a light-first composed workspace with a restrained masthead, one continuous three-step workflow surface, an adjacent context-and-evidence rail, purposeful Google and mono typography, and quiet CSS-only entrance and timeline emphasis motion while keeping chain logic unchanged.
 - [x] 2026-03-27T01:18:23Z M4.2 surface-polish follow-up tighten button hierarchy, helper-copy density, disabled and focus states, address/hash presentation, and timeline/status legibility through presentational component plus CSS edits only, then validate with `pnpm compile`, `pnpm abi:sync`, `pnpm web:build`, and browser checks at `1440x900`, `1280x800`, and `390x844`.
+- [ ] 2026-03-27T01:25:06Z M4.2 final browser-led QA reran `pnpm compile`, `pnpm abi:sync`, `pnpm web:build`, `pnpm deploy:local`, `pnpm seed:local`, and `pnpm demo:local`, but stopped before any UI edits because Playwright browser automation was blocked by an existing local Chrome session and the required viewport inspection could not be completed truthfully.
+- [ ] 2026-03-27T02:00:41Z M4.2 QA retry used the existing Chrome app on `http://localhost:3000`, trimmed first-viewport spacing in `globals.css`, added a same-origin `/api/rpc` proxy plus client-only wagmi transport for browser reads, and reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, but the live browser still settled into the `rpc-unavailable` fallback even though shell-side `/api/rpc` and direct node curls both succeeded, so ready-state and populated-timeline QA remain incomplete.
+- [x] 2026-03-27T02:08:42Z M4.2 final browser QA pass found the real runtime blocker: wagmi was registered against `localhost` chain id `1337` while the synced deploy and Hardhat node use `31337`, so `usePublicClient` never matched the configured chain in-browser. This pass switched the client config to the Hardhat chain, kept browser reads on same-origin `/api/rpc`, tightened form-meta stacking in `globals.css`, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and completed live browser checks at `1440x900`, `1280x800`, and `390x844` with `Demo ready`, disconnected-state copy, and populated timeline rows all rendering cleanly.
 
 ## Surprises & Discoveries
 
@@ -43,6 +46,10 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - On this Next.js version, `pnpm web:build` restores the `import "./.next/types/routes.d.ts";` line in `app/next-env.d.ts`, so the stable repo policy is to keep that file tracked and stop deleting it after builds instead of fighting the generator.
 - M4.1 surfaced mostly repo-hygiene drift rather than product drift: `app/next-env.d.ts` had slipped to the dev-only import, `deployments/localhost.json` had been deleted locally despite being the tracked source of truth, and `.nvmrc` plus `pnpm-lock.yaml` existed without being tracked yet.
 - During this polish pass, the shell-side `deploy:local`, `seed:local`, and `demo:local` flows all completed and both shell-side curl plus browser-side `fetch` calls could reach `http://127.0.0.1:8545`, but the live dashboard still hydrated into the existing `rpc-unavailable` fallback on this machine, so ready-state and populated-timeline visual QA remained partially blocked by a pre-existing browser runtime issue rather than the new presentation changes.
+- This final QA attempt failed even earlier than app-level inspection because Playwright could not launch its controlled Chrome profile while a local Chrome session was already holding the browser open, so the required viewport pass could not begin.
+- On this Next.js dev setup, `127.0.0.1:3000` is not an interchangeable QA host for `localhost:3000`: the dev log showed blocked cross-origin HMR and router-initialization errors on `127.0.0.1`, so browser QA should use `http://localhost:3000`.
+- Even after switching the browser-side public client to a same-origin `/api/rpc` proxy and confirming that `curl http://localhost:3000/api/rpc` plus a standalone viem `getCode` call succeeded, the live dashboard still rendered the `rpc-unavailable` fallback in-browser, which points to a deeper browser/runtime issue than simple transport reachability.
+- The deeper browser/runtime issue turned out to be chain identity, not transport reachability: wagmi's built-in `localhost` chain is `1337`, while the Hardhat node and synced deployment artifact are `31337`, so browser-side `usePublicClient({ chainId: 31337 })` never matched until the config switched to the Hardhat chain.
 
 ## Decision Log
 
@@ -75,6 +82,9 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - 2026-03-26T23:07:57Z: M4.1 is doc-and-hygiene only. Keep `deployments/localhost.json` tracked as the localhost source of truth, keep `app/next-env.d.ts` tracked in its stable build form, intentionally add `.nvmrc` and `pnpm-lock.yaml` as repo metadata, and do not broaden into contract, script, or UI feature work.
 - 2026-03-27T01:00:03Z: This visual-system pass stays presentation-only. The dashboard now reads as one light workspace with a single three-step workflow surface on the left and a secondary context-plus-evidence rail on the right, while the existing wagmi and viem interaction path, readiness logic, and manual policy-id flow stay unchanged.
 - 2026-03-27T01:18:23Z: This follow-up polish pass also stays presentation-only. Tighten hierarchy, spacing rhythm, copy density, disabled/focus states, and timeline readability without changing the wallet flow, readiness logic, contract wiring, or feature scope; if the browser-side ready state still sticks in fallback, record that limitation instead of broadening into unrelated runtime fixes.
+- 2026-03-27T01:25:06Z: The final QA stop condition is strict: if Playwright cannot control Chrome because of an existing local browser session, record the block, make no speculative UI edits, and stop instead of claiming reviewer-ready viewport validation.
+- 2026-03-27T02:00:41Z: Browser QA on this repo should use `http://localhost:3000`, not `http://127.0.0.1:3000`, and the only frontend/runtime broadening allowed in this pass was plumbing that keeps browser JSON-RPC reads same-origin and explainable. If the page still settles into `rpc-unavailable` after that, stop and report the runtime risk instead of continuing into deeper infrastructure work.
+- 2026-03-27T02:08:42Z: Keep the browser client wired to the Hardhat `31337` chain, not wagmi's separate `localhost` `1337` preset, because the synced deployment artifact, wallet guidance, and readiness probe all assume the Hardhat chain id. Once the chain match is correct, final QA should stay visual and presentation-level only.
 
 ## Context and Orientation
 
@@ -232,6 +242,15 @@ after builds. `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build` passed; live
 confirmed the new probe reports `missing-bytecode` on a fresh node before deploy and `ready` after
 `pnpm deploy:local`.
 
+This final M4.2 QA pass is now complete. The last browser-only blocker was not the RPC route but a
+chain mismatch inside the wagmi config: the app was registering wagmi's `localhost` chain `1337`
+while the synced Hardhat deployment and generated addresses use `31337`. Switching the client to
+the Hardhat chain let the readiness probe resolve in-browser, which restored the real `Demo ready`
+state and populated timeline rows at `http://localhost:3000`. A small CSS-only follow-up stacked
+the tiny form-meta label/value pairs so placeholder and parsed-amount text stop crowding at laptop
+and desktop widths. `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build` all passed again after
+the fix, and live browser QA covered `1440x900`, `1280x800`, and `390x844`.
+
 M4.1 is now complete. `README.md` has been rewritten around the real current product boundary,
 wallet-approval relevance, current UI scope, readiness states, manual browser walkthrough, and the
 current local command order. `docs/ops/local-dev.md`, `docs/ops/demo-runbook.md`, and
@@ -258,6 +277,33 @@ capture.
 
 This M4.2 surface-polish follow-up keeps behavior unchanged while sharpening the details that make
 the dashboard feel intentional in both disconnected and action-ready states: calmer primary versus
+secondary button emphasis, cleaner helper-copy density, more legible inline code and status
+presentation, and a slightly steadier rhythm across the workflow and evidence surfaces. Validation
+covered `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, plus live browser checks at
+`1440x900`, `1280x800`, and `390x844`. The exact next submilestone remained M4.2 screenshots and
+runbook polish once a final QA pass could confirm the rendered surface.
+
+This final M4.2 QA attempt added no runtime or presentation changes. Validation reran `pnpm
+compile`, `pnpm abi:sync`, and `pnpm web:build`, then refreshed localhost state with
+`pnpm deploy:local`, `pnpm seed:local`, and `pnpm demo:local` so the dashboard would have a ready
+contract state and populated event evidence available for inspection. The stop condition triggered
+before browser QA could begin: Playwright failed to launch because Chrome reported "Opening in
+existing browser session," which means the required viewport inspection at `1440x900`,
+`1280x800`, and `390x844` could not be completed truthfully on this machine. The exact next step
+is to close the blocking local Chrome session, rerun the live browser pass, and only then decide
+whether any final surgical presentation edits are still needed.
+
+This QA retry moved browser inspection onto the existing Chrome app and explicitly used
+`http://localhost:3000` after the Next dev log showed that `127.0.0.1:3000` triggered blocked
+cross-origin HMR requests and router-init errors. The presentation side did improve: `globals.css`
+now trims masthead and surface padding so the first viewport at `1440x900` and `1280x800` brings
+more of the working surface and evidence rail into view without changing the underlying layout
+model. The runtime side is still not reviewer-ready: the browser continued to settle into the
+`rpc-unavailable` fallback even after a same-origin `/api/rpc` proxy, client-only wagmi transport,
+and stable readiness-effect dependencies landed, while shell-side curls and a standalone viem
+`getCode` call through `/api/rpc` both succeeded. The exact next step remains a focused browser
+runtime investigation for the localhost read path before claiming ready-state or populated-timeline
+QA is complete.
 supporting button hierarchy, denser and shorter helper copy, cleaner focus and disabled states,
 more graceful address and hash presentation, and a more legible status-plus-timeline surface.
 `app/src/app/globals.css` now carries the refined control, spacing, status, and timeline rhythm,
