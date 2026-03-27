@@ -27,6 +27,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-27T02:08:42Z M4.2 final browser QA pass found the real runtime blocker: wagmi was registered against `localhost` chain id `1337` while the synced deploy and Hardhat node use `31337`, so `usePublicClient` never matched the configured chain in-browser. This pass switched the client config to the Hardhat chain, kept browser reads on same-origin `/api/rpc`, tightened form-meta stacking in `globals.css`, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and completed live browser checks at `1440x900`, `1280x800`, and `390x844` with `Demo ready`, disconnected-state copy, and populated timeline rows all rendering cleanly.
 - [x] 2026-03-27T12:18:00Z M4.2 final product-surface polish pass trimmed hero and panel copy into shorter wallet-style language, replaced implementation-heavy evidence wording with concise activity phrasing, softened the light surface chrome, refined the activity rows into receipt-style entries, removed `.tmp-qa` from the worktree, added `.tmp-qa/` to `.gitignore`, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and completed live browser QA at `1440x900`, `1280x800`, and `390x844` with populated activity and no horizontal overflow.
 - [x] 2026-03-27T12:29:23Z M4.2 final screenshot and README cleanup pass captured browser-led product shots from `http://localhost:3000` in a ready, populated state, saved only `docs/screenshots/policyvault-desktop-workflow.png`, `docs/screenshots/policyvault-desktop-evidence.png`, and `docs/screenshots/policyvault-mobile.png`, added a concise README `Interface` section, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and kept the worktree limited to intentional docs, plan, and screenshot changes.
+- [x] 2026-03-27T12:44:21Z M4.2 connected-state microfix kept the diff CSS-only in `app/src/app/globals.css`, tightened shrink-wrap behavior for live balances, policy ids, transaction hashes, and timeline metadata, added steadier desktop numeric alignment with mobile fallbacks, reran `pnpm web:build`, and recorded that Playwright browser automation was still unavailable because Chrome reported "Opening in existing browser session."
 
 ## Surprises & Discoveries
 
@@ -91,6 +92,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - 2026-03-27T12:08:00Z: This final M4.2 pass stays presentation-only. Remove implementation-explainer copy from the visible product surface, keep the hero and workflow reading like one concise wallet operation flow, polish the activity rail into receipt-style evidence, and clean `.tmp-qa` out of the worktree while leaving tracked repo-policy files alone.
 - 2026-03-27T12:18:00Z: Keep the final polish centered on language, hierarchy, and evidence styling rather than new features. It is acceptable to restart a stale local dev server when needed for truthful browser QA, but leave contract, script, ABI, and tracked repo-policy files otherwise untouched.
 - 2026-03-27T12:29:23Z: The final M4.2 handoff should ship only three browser-led README screenshots under `docs/screenshots/`, all captured from `http://localhost:3000` with a real ready-state timeline visible; keep the README section concise and do not broaden this pass into more UI feature or layout work.
+- 2026-03-27T12:44:21Z: This connected-state cleanup stays CSS-only and deliberately reuses the existing shared value, detail-row, status, and timeline classes so wrapping, spacing, and numeric alignment improve under real wallet data without changing component structure, chain wiring, or formatting semantics.
 
 ## Context and Orientation
 
@@ -329,3 +331,11 @@ README into a gallery. Validation reran `pnpm compile`, `pnpm abi:sync`, and `pn
 and the worktree stayed limited to intentional docs, plan, and screenshot changes. The exact next
 submilestone is M4.4 rehearse the 60-second and 3-minute explanations, with M4.3 testnet deploy
 still explicitly optional and out of scope for this pass.
+
+This tiny M4.2 connected-state microfix is now complete. `app/src/app/globals.css` lets live
+wallet values shrink and wrap more predictably inside the existing wallet, policy, charge, and
+activity layouts, keeps desktop balances and other numeric values visually aligned, adds a little
+more breathing room when success or error states include transaction metadata, and falls back to
+left-aligned wrapped values on mobile. `pnpm web:build` passed after the CSS-only change. Browser
+automation remained unavailable because Playwright still hit Chrome's "Opening in existing browser
+session" block, so no new live browser pass could be claimed for this stop.

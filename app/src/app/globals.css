@@ -355,6 +355,8 @@ main.app-shell {
   margin: 0;
   color: var(--muted-text);
   line-height: 1.5;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .form-note,
@@ -364,10 +366,14 @@ main.app-shell {
 }
 
 .value {
+  display: block;
   color: var(--text);
   font-size: 0.99rem;
   font-weight: 600;
   letter-spacing: -0.02em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
 }
 
 .small-value {
@@ -378,7 +384,8 @@ main.app-shell {
   font-family: var(--font-mono), monospace;
   font-size: 0.83rem;
   letter-spacing: -0.02em;
-  word-break: break-all;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .tag {
@@ -429,6 +436,8 @@ main.app-shell {
 .stat-block {
   display: grid;
   gap: 6px;
+  min-width: 0;
+  grid-template-rows: auto 1fr;
   padding: 12px 13px;
   border-radius: 16px;
   border: 1px solid rgba(23, 32, 51, 0.04);
@@ -451,12 +460,14 @@ main.app-shell {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
 .inline-meta {
   display: grid;
   gap: 3px;
+  min-width: 0;
 }
 
 .detail-row-stack {
@@ -497,6 +508,7 @@ main.app-shell {
 .status-box {
   display: grid;
   gap: 6px;
+  min-width: 0;
   padding: 12px 13px;
   border-radius: 14px;
   border: 1px solid rgba(23, 32, 51, 0.08);
@@ -519,7 +531,7 @@ main.app-shell {
 }
 
 .action-status {
-  gap: 6px;
+  gap: 8px;
 }
 
 .timeline-status-copy {
@@ -532,8 +544,11 @@ main.app-shell {
 }
 
 .status-meta {
+  display: block;
   margin: 0;
   color: var(--muted-text);
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .error-copy {
@@ -633,6 +648,7 @@ main.app-shell {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
 }
 
@@ -644,6 +660,7 @@ main.app-shell {
 .timeline-item-body {
   display: grid;
   gap: 5px;
+  min-width: 0;
 }
 
 .timeline-title {
@@ -658,6 +675,13 @@ main.app-shell {
 .timeline-meta {
   font-size: 0.74rem;
   color: rgba(109, 121, 139, 0.92);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-block .value,
+.form-meta-grid .value,
+.detail-row:not(.detail-row-stack) .value {
+  text-align: right;
 }
 
 .timeline-item-empty::before {
@@ -762,6 +786,12 @@ main.app-shell {
   .inline-meta,
   .detail-row {
     flex-direction: column;
+  }
+
+  .stat-block .value,
+  .form-meta-grid .value,
+  .detail-row .value {
+    text-align: left;
   }
 
   .timeline-item-latest {
