@@ -34,6 +34,20 @@ PolicyVault v1 explicitly does not include:
 - production deployment targets
 - backend services or an indexer
 
+## Interface
+
+Fund, create, and operate a bounded spend flow from one surface.
+
+![PolicyVault desktop workflow](docs/screenshots/policyvault-desktop-workflow.png)
+
+Activity stays adjacent to the workflow as live evidence.
+
+![PolicyVault desktop evidence](docs/screenshots/policyvault-desktop-evidence.png)
+
+The mobile surface keeps the same flow and hierarchy.
+
+![PolicyVault mobile interface](docs/screenshots/policyvault-mobile.png)
+
 ## Architecture
 
 - `contracts/`

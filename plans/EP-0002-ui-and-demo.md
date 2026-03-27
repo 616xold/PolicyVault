@@ -26,6 +26,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [ ] 2026-03-27T02:00:41Z M4.2 QA retry used the existing Chrome app on `http://localhost:3000`, trimmed first-viewport spacing in `globals.css`, added a same-origin `/api/rpc` proxy plus client-only wagmi transport for browser reads, and reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, but the live browser still settled into the `rpc-unavailable` fallback even though shell-side `/api/rpc` and direct node curls both succeeded, so ready-state and populated-timeline QA remain incomplete.
 - [x] 2026-03-27T02:08:42Z M4.2 final browser QA pass found the real runtime blocker: wagmi was registered against `localhost` chain id `1337` while the synced deploy and Hardhat node use `31337`, so `usePublicClient` never matched the configured chain in-browser. This pass switched the client config to the Hardhat chain, kept browser reads on same-origin `/api/rpc`, tightened form-meta stacking in `globals.css`, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and completed live browser checks at `1440x900`, `1280x800`, and `390x844` with `Demo ready`, disconnected-state copy, and populated timeline rows all rendering cleanly.
 - [x] 2026-03-27T12:18:00Z M4.2 final product-surface polish pass trimmed hero and panel copy into shorter wallet-style language, replaced implementation-heavy evidence wording with concise activity phrasing, softened the light surface chrome, refined the activity rows into receipt-style entries, removed `.tmp-qa` from the worktree, added `.tmp-qa/` to `.gitignore`, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and completed live browser QA at `1440x900`, `1280x800`, and `390x844` with populated activity and no horizontal overflow.
+- [x] 2026-03-27T12:29:23Z M4.2 final screenshot and README cleanup pass captured browser-led product shots from `http://localhost:3000` in a ready, populated state, saved only `docs/screenshots/policyvault-desktop-workflow.png`, `docs/screenshots/policyvault-desktop-evidence.png`, and `docs/screenshots/policyvault-mobile.png`, added a concise README `Interface` section, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and kept the worktree limited to intentional docs, plan, and screenshot changes.
 
 ## Surprises & Discoveries
 
@@ -89,6 +90,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - 2026-03-27T02:08:42Z: Keep the browser client wired to the Hardhat `31337` chain, not wagmi's separate `localhost` `1337` preset, because the synced deployment artifact, wallet guidance, and readiness probe all assume the Hardhat chain id. Once the chain match is correct, final QA should stay visual and presentation-level only.
 - 2026-03-27T12:08:00Z: This final M4.2 pass stays presentation-only. Remove implementation-explainer copy from the visible product surface, keep the hero and workflow reading like one concise wallet operation flow, polish the activity rail into receipt-style evidence, and clean `.tmp-qa` out of the worktree while leaving tracked repo-policy files alone.
 - 2026-03-27T12:18:00Z: Keep the final polish centered on language, hierarchy, and evidence styling rather than new features. It is acceptable to restart a stale local dev server when needed for truthful browser QA, but leave contract, script, ABI, and tracked repo-policy files otherwise untouched.
+- 2026-03-27T12:29:23Z: The final M4.2 handoff should ship only three browser-led README screenshots under `docs/screenshots/`, all captured from `http://localhost:3000` with a real ready-state timeline visible; keep the README section concise and do not broaden this pass into more UI feature or layout work.
 
 ## Context and Orientation
 
@@ -317,17 +319,13 @@ explaining the implementation. `app/src/lib/events.ts` now formats recent entrie
 receipt-style activity rows with short timestamps and lighter metadata, while `globals.css`
 softens the light surfaces, trims copy density, and keeps the first viewport composed on desktop
 and mobile. Repo hygiene is cleaner too: `.tmp-qa` is now ignored and removed from the worktree.
-The exact next submilestone remains M4.2 screenshots and runbook polish.
-supporting button hierarchy, denser and shorter helper copy, cleaner focus and disabled states,
-more graceful address and hash presentation, and a more legible status-plus-timeline surface.
-`app/src/app/globals.css` now carries the refined control, spacing, status, and timeline rhythm,
-while the presentational panels and timeline formatting helpers keep the same chain behavior but
-present it with tighter copy and calmer secondary text. `pnpm compile`, `pnpm abi:sync`, and
-`pnpm web:build` all passed, and browser QA at `1440x900`, `1280x800`, and `390x844` confirmed no
-horizontal overflow plus a more deliberate disconnected-state and mobile presentation. On this
-machine, the live dashboard still hydrated into the existing `RPC offline` fallback even after
-fresh `deploy:local`, `seed:local`, and `demo:local` runs, so ready-state and populated-timeline
-browser verification remain partially blocked by that pre-existing runtime issue. The exact next
-thread I recommend is a narrow browser-readiness investigation to restore true `Demo ready` plus
-populated timeline rendering in the live app, followed by the final screenshot and runbook capture
-pass.
+
+This final M4.2 screenshot-and-handoff pass is also complete. Browser-led capture from
+`http://localhost:3000` now produced three tracked assets under `docs/screenshots/`:
+`policyvault-desktop-workflow.png`, `policyvault-desktop-evidence.png`, and
+`policyvault-mobile.png`. `README.md` now includes a short `Interface` section near the top that
+shows the composed workflow, adjacent activity evidence, and mobile hierarchy without turning the
+README into a gallery. Validation reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`,
+and the worktree stayed limited to intentional docs, plan, and screenshot changes. The exact next
+submilestone is M4.4 rehearse the 60-second and 3-minute explanations, with M4.3 testnet deploy
+still explicitly optional and out of scope for this pass.
