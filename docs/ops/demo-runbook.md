@@ -79,8 +79,8 @@ The current UI supports the full narratable flow:
 Use it as an optional companion after `pnpm web:dev`:
 
 1. connect the owner wallet
-2. confirm the dashboard reaches `Demo ready`
-3. if the readiness state is not `Demo ready`, explain it directly:
+2. confirm the dashboard reaches `Ready`
+3. if the readiness state is not `Ready`, explain it directly:
    - `Missing local deploy`: rerun `pnpm deploy:local` and `pnpm abi:sync`
    - `RPC offline`: start `pnpm node`
    - `No contract code`: rerun `pnpm deploy:local` and `pnpm abi:sync` on the current node
@@ -89,7 +89,7 @@ Use it as an optional companion after `pnpm web:dev`:
 6. load that policy id to show owner, beneficiary, cap, spent, remaining, expiry, and revoked state
 7. switch to the beneficiary wallet to charge and call out the `Charged` row with spent and remaining values
 8. switch back to the owner wallet to revoke and withdraw, then show the final revoke and withdraw rows together
-9. use the manual `Refresh timeline` button only if you want to prove the log reads are direct and
+9. use the `Refresh` button only if you want to prove the log reads are direct and
    not backed by an indexer
 
 If you want one clear UI-side revert, either try an over-cap charge or click an owner-only or

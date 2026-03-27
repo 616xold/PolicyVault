@@ -144,7 +144,7 @@ Before the dashboard claims it is usable, it distinguishes:
 - `Missing local deploy`: no synced contract addresses yet
 - `RPC offline`: localhost RPC is unavailable or not responding
 - `No contract code`: addresses exist, but the current node has no bytecode at one or both saved addresses
-- `Demo ready`: the RPC is live and both configured addresses have deployed bytecode
+- `Ready`: the RPC is live and both configured addresses have deployed bytecode
 
 ## Manual browser walkthrough
 
@@ -152,7 +152,7 @@ Owner flow:
 
 1. Start the local node, deploy, sync ABI, seed wallets, and run `pnpm web:dev`.
 2. Connect localhost account `#0`.
-3. Confirm the dashboard reaches `Demo ready`.
+3. Confirm the dashboard reaches `Ready`.
 4. Deposit through either approve or permit and confirm wallet balance, allowance, vault balance, and timeline all update after receipt.
 5. Create a policy with beneficiary account `#1`, note the returned policy id, and load it by id.
 
@@ -172,7 +172,7 @@ Owner revoke and withdraw flow:
 Timeline confirmation:
 
 1. Check that the recent event list shows deposit, policy creation, charge, revoke, and withdraw in chain order.
-2. Use the manual refresh button only if you want to emphasize that the UI is reading logs directly rather than through an indexer.
+2. Use the `Refresh` button only if you want to emphasize that the UI is reading logs directly rather than through an indexer.
 
 ## Trade-offs and future work
 

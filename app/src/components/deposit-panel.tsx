@@ -48,10 +48,10 @@ export function DepositPanel({
       <div className="panel-header">
         <div>
           <p className="panel-eyebrow">01 Fund</p>
-          <h3 className="panel-title">Add vault balance</h3>
+          <h3 className="panel-title">Fund</h3>
         </div>
       </div>
-      <p className="panel-intro">Deposit with approval or permit.</p>
+      <p className="panel-intro">Add balance to the vault.</p>
       <div className="form-row">
         <label className="label field-label" htmlFor="deposit-amount">
           Amount
@@ -65,11 +65,11 @@ export function DepositPanel({
         />
         <div className="form-meta-grid">
           <div className="inline-meta">
-            <span className="label">Wallet balance</span>
+            <span className="label">Wallet</span>
             <span className="value small-value">{walletBalance}</span>
           </div>
           <div className="inline-meta">
-            <span className="label">Parsed amount</span>
+            <span className="label">Preview</span>
             <span className="value small-value">{amountPreview || 'Enter an amount'}</span>
           </div>
         </div>
@@ -83,7 +83,7 @@ export function DepositPanel({
         >
           {isBusy && actionState.phase === 'pending' && actionState.mode === 'approve'
             ? 'Processing…'
-            : 'Approve + fund'}
+            : 'Approve then fund'}
         </button>
         <button
           type="button"
@@ -91,7 +91,7 @@ export function DepositPanel({
           disabled={Boolean(disabledReason) || isBusy || !amount.trim()}
           onClick={onPermitDeposit}
         >
-          Permit + fund
+          Sign and fund
         </button>
       </div>
       {actionState.phase !== 'idle' ? (

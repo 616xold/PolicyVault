@@ -62,13 +62,12 @@ export function ChargePanel({
       <div className="panel-header">
         <div>
           <p className="panel-eyebrow">03 Use</p>
-          <h3 className="panel-title">Charge or unwind</h3>
+          <h3 className="panel-title">Use</h3>
         </div>
       </div>
-      <p className="panel-intro">Beneficiary charges. Owner revokes and withdraws.</p>
+      <p className="panel-intro">Charge, revoke, or withdraw.</p>
       <div className="subsection-header">
-        <p className="subsection-title">Policy actions</p>
-        <p className="note">Use one policy id for charge or revoke.</p>
+        <p className="subsection-title">Charge</p>
       </div>
       <div className="form-row">
         <label className="label field-label" htmlFor="policy-id">
@@ -93,12 +92,12 @@ export function ChargePanel({
           onChange={(event) => onChargeAmountChange(event.target.value)}
         />
         <div className="inline-meta">
-          <span className="label">Parsed amount</span>
+          <span className="label">Preview</span>
           <span className="value small-value">{chargePreview || 'Enter a charge amount'}</span>
         </div>
       </div>
       <p className="note form-note">
-        {disabledReason ?? 'Charge with the beneficiary wallet.'}
+        {disabledReason ?? 'Beneficiary wallet required.'}
       </p>
       <div className="button-row">
         <button
@@ -127,8 +126,7 @@ export function ChargePanel({
       <div className="panel-divider" />
 
       <div className="subsection-header">
-        <p className="subsection-title">Withdraw balance</p>
-        <p className="note">Send unused funds to a receiver.</p>
+        <p className="subsection-title">Withdraw</p>
       </div>
       <div className="form-row">
         <label className="label field-label" htmlFor="withdraw-amount">
@@ -142,7 +140,7 @@ export function ChargePanel({
           onChange={(event) => onWithdrawAmountChange(event.target.value)}
         />
         <div className="inline-meta">
-          <span className="label">Parsed amount</span>
+          <span className="label">Preview</span>
           <span className="value small-value">{withdrawPreview || 'Enter a withdraw amount'}</span>
         </div>
       </div>
@@ -158,7 +156,7 @@ export function ChargePanel({
         />
       </div>
       <p className="note form-note">
-        {disabledReason ?? 'Withdraw with the owner wallet.'}
+        {disabledReason ?? 'Owner wallet required.'}
       </p>
       <div className="button-row">
         <button

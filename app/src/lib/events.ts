@@ -154,7 +154,7 @@ function formatTimelineRecord(
         kind: record.kind,
         metadata: buildMetadata(record),
         stamp: formatActivityTimestamp(blockTimestamp),
-        summary: `Owner ${shortAddress(record.owner)}. Vault balance ${tokenAmount(record.newVaultBalance)}.`,
+        summary: `Vault balance ${tokenAmount(record.newVaultBalance)}.`,
         title: `Funded ${tokenAmount(record.amount)}`,
       };
     case 'policy-created':
@@ -164,8 +164,8 @@ function formatTimelineRecord(
         kind: record.kind,
         metadata: buildMetadata(record, `Policy ${shortAddress(record.policyId)}`),
         stamp: formatActivityTimestamp(blockTimestamp),
-        summary: `Cap ${tokenAmount(record.cap)}. Expires ${formatCompactTimestamp(record.expiresAt)}.`,
-        title: `Policy for ${shortAddress(record.beneficiary)}`,
+        summary: `For ${shortAddress(record.beneficiary)} with cap ${tokenAmount(record.cap)}. Expires ${formatCompactTimestamp(record.expiresAt)}.`,
+        title: 'Created policy',
       };
     case 'charge':
       return {
@@ -174,7 +174,7 @@ function formatTimelineRecord(
         kind: record.kind,
         metadata: buildMetadata(record, `Policy ${shortAddress(record.policyId)}`),
         stamp: formatActivityTimestamp(blockTimestamp),
-        summary: `${tokenAmount(record.remaining)} left after ${tokenAmount(record.spent)} spent.`,
+        summary: `${tokenAmount(record.remaining)} remaining.`,
         title: `Charged ${tokenAmount(record.amount)}`,
       };
     case 'policy-revoked':
@@ -184,7 +184,7 @@ function formatTimelineRecord(
         kind: record.kind,
         metadata: buildMetadata(record, `Policy ${shortAddress(record.policyId)}`),
         stamp: formatActivityTimestamp(blockTimestamp),
-        summary: `${shortAddress(record.beneficiary)} can no longer charge.`,
+        summary: `Charges stopped for ${shortAddress(record.beneficiary)}.`,
         title: 'Revoked policy',
       };
     case 'withdraw':

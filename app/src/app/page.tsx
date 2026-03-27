@@ -5,15 +5,15 @@ export default function Page() {
     <main className="app-shell">
       <section className="masthead">
         <div className="masthead-copy">
-          <p className="eyebrow">Bounded spend</p>
+          <p className="eyebrow">Spend controls</p>
           <h1>PolicyVault</h1>
           <p className="masthead-lede">
-            Fund a vault, set a spend policy, and keep repeat charges inside clear limits.
+            Dedicated balance, clear limits, and instant revocation for repeat charges.
           </p>
         </div>
         <div aria-label="PolicyVault flow" className="masthead-flow">
           <span>Fund</span>
-          <span>Create</span>
+          <span>Policy</span>
           <span>Use</span>
         </div>
       </section>

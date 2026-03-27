@@ -32,7 +32,7 @@ Before enabling contract reads or writes, the dashboard distinguishes four readi
 1. `Missing local deploy`
 2. `RPC offline`
 3. `No contract code`
-4. `Demo ready`
+4. `Ready`
 
 That readiness probe checks both configured addresses with `getCode`, so the app can tell the
 difference between "no synced deploy yet" and "saved addresses exist, but this fresh localhost node
@@ -135,7 +135,7 @@ For the event timeline:
    index
 4. fetch block timestamps only for the visible slice
 5. render a concise human-readable row instead of raw JSON
-6. refresh after successful writes, poll lightly, and keep a manual refresh button for demo use
+6. refresh after successful writes, poll lightly, and keep the `Refresh` button available for demo use
 
 The UI keeps owner-only and beneficiary-only actions visible. If the connected wallet is the wrong
 actor for a button, the simulation error is surfaced in the panel copy instead of hiding the action.

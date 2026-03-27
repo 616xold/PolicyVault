@@ -72,10 +72,10 @@ export function PolicyPanel({
       <div className="panel-header">
         <div>
           <p className="panel-eyebrow">02 Create</p>
-          <h3 className="panel-title">Set a policy</h3>
+          <h3 className="panel-title">Policy</h3>
         </div>
       </div>
-      <p className="panel-intro">Choose beneficiary, cap, and expiry.</p>
+      <p className="panel-intro">Set the beneficiary, limit, and expiry.</p>
       <div className="form-row">
         <label className="label field-label" htmlFor="beneficiary">
           Beneficiary
@@ -99,7 +99,7 @@ export function PolicyPanel({
           onChange={(event) => onCapChange(event.target.value)}
         />
         <div className="inline-meta">
-          <span className="label">Parsed amount</span>
+          <span className="label">Preview</span>
           <span className="value small-value">{capPreview || 'Enter a cap amount'}</span>
         </div>
       </div>
@@ -163,8 +163,8 @@ export function PolicyPanel({
       <div className="panel-divider" />
 
       <div className="subsection-header">
-        <p className="subsection-title">Inspect</p>
-        <p className="note">Load a policy by id.</p>
+        <p className="subsection-title">Lookup</p>
+        <p className="note">Review a saved policy.</p>
       </div>
       <div className="form-row">
         <label className="label field-label" htmlFor="lookup-policy-id">
@@ -178,7 +178,7 @@ export function PolicyPanel({
         />
       </div>
       <p className="note form-note">
-        {lookupDisabledReason ?? 'Reads stay available without a connected wallet.'}
+        {lookupDisabledReason ?? 'Review policy details anytime.'}
       </p>
       <button
         type="button"
@@ -186,7 +186,7 @@ export function PolicyPanel({
         disabled={Boolean(lookupDisabledReason) || isLookupBusy || !lookupPolicyId.trim()}
         onClick={onLoadPolicy}
       >
-        {isLookupBusy ? 'Loading…' : 'Load'}
+        {isLookupBusy ? 'Loading…' : 'Review'}
       </button>
       {lookupState.phase === 'loading' || lookupState.phase === 'error' ? (
         <div className={`status-box ${lookupState.phase === 'error' ? 'error' : 'pending'}`}>

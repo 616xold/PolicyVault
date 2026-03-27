@@ -28,6 +28,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - [x] 2026-03-27T12:18:00Z M4.2 final product-surface polish pass trimmed hero and panel copy into shorter wallet-style language, replaced implementation-heavy evidence wording with concise activity phrasing, softened the light surface chrome, refined the activity rows into receipt-style entries, removed `.tmp-qa` from the worktree, added `.tmp-qa/` to `.gitignore`, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and completed live browser QA at `1440x900`, `1280x800`, and `390x844` with populated activity and no horizontal overflow.
 - [x] 2026-03-27T12:29:23Z M4.2 final screenshot and README cleanup pass captured browser-led product shots from `http://localhost:3000` in a ready, populated state, saved only `docs/screenshots/policyvault-desktop-workflow.png`, `docs/screenshots/policyvault-desktop-evidence.png`, and `docs/screenshots/policyvault-mobile.png`, added a concise README `Interface` section, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and kept the worktree limited to intentional docs, plan, and screenshot changes.
 - [x] 2026-03-27T12:44:21Z M4.2 connected-state microfix kept the diff CSS-only in `app/src/app/globals.css`, tightened shrink-wrap behavior for live balances, policy ids, transaction hashes, and timeline metadata, added steadier desktop numeric alignment with mobile fallbacks, reran `pnpm web:build`, and recorded that Playwright browser automation was still unavailable because Chrome reported "Opening in existing browser session."
+- [x] 2026-03-27T15:15:37Z M4.2 final handoff copy pass kept the diff presentation-only, restarted a stale `next dev` process so the live hero rendered truthfully, rewrote the visible surface around wallet-native labels such as `Spend flow`, `Wallet overview`, `Receipts`, `Ready`, and `Sign and fund`, reran `pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, and completed browser QA at `1440x900`, `1280x800`, and `390x844` with a ready state, populated receipts, and no horizontal overflow.
 
 ## Surprises & Discoveries
 
@@ -91,6 +92,7 @@ The user-visible outcome is a small dashboard that can connect a wallet, show ba
 - 2026-03-27T02:08:42Z: Keep the browser client wired to the Hardhat `31337` chain, not wagmi's separate `localhost` `1337` preset, because the synced deployment artifact, wallet guidance, and readiness probe all assume the Hardhat chain id. Once the chain match is correct, final QA should stay visual and presentation-level only.
 - 2026-03-27T12:08:00Z: This final M4.2 pass stays presentation-only. Remove implementation-explainer copy from the visible product surface, keep the hero and workflow reading like one concise wallet operation flow, polish the activity rail into receipt-style evidence, and clean `.tmp-qa` out of the worktree while leaving tracked repo-policy files alone.
 - 2026-03-27T12:18:00Z: Keep the final polish centered on language, hierarchy, and evidence styling rather than new features. It is acceptable to restart a stale local dev server when needed for truthful browser QA, but leave contract, script, ABI, and tracked repo-policy files otherwise untouched.
+- 2026-03-27T15:15:37Z: Final handoff language should read like a wallet product first and a demo second. Use short titles, one support sentence per major section, wallet-facing action labels such as `Sign and fund`, and the current readiness label `Ready`, while leaving architecture and runbook detail in docs instead of the product surface.
 - 2026-03-27T12:29:23Z: The final M4.2 handoff should ship only three browser-led README screenshots under `docs/screenshots/`, all captured from `http://localhost:3000` with a real ready-state timeline visible; keep the README section concise and do not broaden this pass into more UI feature or layout work.
 - 2026-03-27T12:44:21Z: This connected-state cleanup stays CSS-only and deliberately reuses the existing shared value, detail-row, status, and timeline classes so wrapping, spacing, and numeric alignment improve under real wallet data without changing component structure, chain wiring, or formatting semantics.
 
@@ -339,3 +341,13 @@ more breathing room when success or error states include transaction metadata, a
 left-aligned wrapped values on mobile. `pnpm web:build` passed after the CSS-only change. Browser
 automation remained unavailable because Playwright still hit Chrome's "Opening in existing browser
 session" block, so no new live browser pass could be claimed for this stop.
+
+This final M4.2 handoff copy pass is now complete. The live product surface reads more like a
+wallet and less like a walkthrough: the masthead, workflow shell, panel headings, action buttons,
+wallet rail, readiness badge, and receipt labels are all shorter and more product-facing, while
+the activity history keeps the proof visible without surrounding explainer copy. Validation reran
+`pnpm compile`, `pnpm abi:sync`, and `pnpm web:build`, then restarted a stale `next dev` process
+so browser QA at `http://localhost:3000` reflected the true current hero and ready-state UI at
+`1440x900`, `1280x800`, and `390x844`. The exact next submilestone remains M4.4 rehearse the
+60-second and 3-minute explanations; no contract, script, ABI, or wallet-logic work was added in
+this stop.

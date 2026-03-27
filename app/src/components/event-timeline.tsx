@@ -33,7 +33,7 @@ function eventLabel(kind: TimelineEntry['kind']) {
     case 'deposit':
       return 'Fund';
     case 'policy-created':
-      return 'Create';
+      return 'Policy';
     case 'charge':
       return 'Charge';
     case 'policy-revoked':
@@ -53,12 +53,14 @@ export function EventTimeline({
   loadState,
   onRefresh,
 }: EventTimelineProps) {
+  const showLoadStateMessage = loadState.phase !== 'success' || entries.length === 0;
+
   return (
     <section className="context-panel evidence-panel">
       <div className="panel-header timeline-header">
         <div>
           <p className="panel-eyebrow">Activity</p>
-          <h3 className="panel-title">Recent activity</h3>
+          <h3 className="panel-title">Receipts</h3>
         </div>
         <button
           type="button"
@@ -88,17 +90,20 @@ export function EventTimeline({
               {lastActionLabel}
             </span>
           </div>
-          <p className="note">Most recent confirmed write.</p>
         </div>
       </div>
 
-      {loadState.phase === 'loading' || loadState.phase === 'error' ? (
-        <div className={`status-box ${loadState.phase === 'error' ? 'error' : 'pending'}`}>
-          <p className="status-copy">{loadState.message}</p>
-        </div>
-      ) : (
-        <p className="note meta-note timeline-load-note">{loadState.message}</p>
-      )}
+      {showLoadStateMessage
+        ? loadState.phase === 'loading' || loadState.phase === 'error'
+          ? (
+              <div className={`status-box ${loadState.phase === 'error' ? 'error' : 'pending'}`}>
+                <p className="status-copy">{loadState.message}</p>
+              </div>
+            )
+          : (
+              <p className="note meta-note timeline-load-note">{loadState.message}</p>
+            )
+        : null}
 
       <div className="timeline">
         {entries.length > 0 ? (
@@ -120,8 +125,8 @@ export function EventTimeline({
           ))
         ) : (
           <div className="timeline-item timeline-item-empty">
-            <div className="value timeline-title">No activity yet.</div>
-            <div className="note">Your next receipt appears here.</div>
+            <div className="value timeline-title">No receipts yet.</div>
+            <div className="note">Your next confirmed action appears here.</div>
           </div>
         )}
       </div>

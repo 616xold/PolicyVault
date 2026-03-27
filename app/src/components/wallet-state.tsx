@@ -15,7 +15,6 @@ type WalletStateProps = {
   onConnect: () => void;
   onDisconnect: () => void;
   tokenBalance: string;
-  tokenLabel: string;
   vaultBalance: string;
 };
 
@@ -32,7 +31,6 @@ export function WalletState({
   onConnect,
   onDisconnect,
   tokenBalance,
-  tokenLabel,
   vaultBalance,
 }: WalletStateProps) {
   const addressLabel = address ? shortAddress(address) : 'Not connected';
@@ -42,7 +40,7 @@ export function WalletState({
       <div className="panel-header">
         <div>
           <p className="panel-eyebrow">Wallet</p>
-          <h3 className="panel-title">Balances and access</h3>
+          <h3 className="panel-title">Wallet</h3>
         </div>
         <span className={`tag status-tag ${isConnected ? 'status-live' : 'status-muted'}`}>
           {connectionStatus}
@@ -51,15 +49,15 @@ export function WalletState({
 
       <div className="stats-grid">
         <div className="stat-block">
-          <span className="label">{tokenLabel} balance</span>
+          <span className="label">Wallet</span>
           <span className="value">{tokenBalance}</span>
         </div>
         <div className="stat-block">
-          <span className="label">Vault balance</span>
+          <span className="label">Vault</span>
           <span className="value">{vaultBalance}</span>
         </div>
         <div className="stat-block">
-          <span className="label">Allowance</span>
+          <span className="label">Approval</span>
           <span className="value">{allowance}</span>
         </div>
       </div>

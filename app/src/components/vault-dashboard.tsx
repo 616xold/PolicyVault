@@ -80,7 +80,7 @@ type LastActionState = {
 
 const initialTimelineState: TimelineLoadState = {
   phase: 'idle',
-  message: 'Waiting for activity.',
+  message: 'Awaiting first receipt.',
 };
 
 export function VaultDashboard() {
@@ -110,7 +110,7 @@ export function VaultDashboard() {
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
   const [timelineState, setTimelineState] = useState<TimelineLoadState>(initialTimelineState);
   const [lastActionState, setLastActionState] = useState<LastActionState>({
-    message: 'Awaiting first write.',
+    message: 'Awaiting first receipt.',
     tone: 'muted',
   });
   const [contractReadiness, setContractReadiness] =
@@ -251,13 +251,13 @@ export function VaultDashboard() {
 
   const readinessBlocker =
     contractReadiness.kind === 'missing-addresses'
-      ? 'Sync a local deploy first.'
+      ? 'Sync deployment first.'
       : contractReadiness.kind === 'rpc-unavailable'
-        ? 'Start the local node.'
+        ? 'Start local node.'
         : contractReadiness.kind === 'checking-contracts'
-          ? 'Checking vault availability.'
+          ? 'Checking vault.'
           : contractReadiness.kind === 'missing-bytecode'
-            ? `${describeMissingContracts(contractReadiness.missingContracts)} missing on this node. Redeploy and sync.`
+            ? `${describeMissingContracts(contractReadiness.missingContracts)} missing. Redeploy and sync.`
             : undefined;
 
   const readDisabledReason = readinessBlocker;
@@ -265,11 +265,11 @@ export function VaultDashboard() {
   const writeDisabledReason = readinessBlocker
     ? readinessBlocker
     : !isConnected
-      ? 'Connect a wallet to continue.'
+      ? 'Connect wallet.'
       : !isExpectedChain
         ? `Switch to local chain (${contractConfig.chainId}).`
         : !walletClient
-          ? 'Unlock wallet to continue.'
+          ? 'Unlock wallet.'
           : tokenMetadata.isPending
             ? 'Loading token info.'
             : tokenMetadata.error
@@ -291,12 +291,12 @@ export function VaultDashboard() {
         phase: 'idle',
         message:
           contractReadiness.kind === 'missing-addresses'
-            ? 'Sync a local deploy to load activity.'
+            ? 'Sync deployment to load receipts.'
             : contractReadiness.kind === 'rpc-unavailable'
-              ? 'Start the local node to load activity.'
+              ? 'Start local node to load receipts.'
               : contractReadiness.kind === 'checking-contracts'
-                ? 'Checking vault availability.'
-                : `${describeMissingContracts(contractReadiness.missingContracts)} missing on this node.`,
+                ? 'Checking vault.'
+                : `${describeMissingContracts(contractReadiness.missingContracts)} missing.`,
       });
       return;
     }
@@ -306,7 +306,7 @@ export function VaultDashboard() {
       setTimelineEntries([]);
       setTimelineState({
         phase: 'idle',
-        message: 'Start the local node to load activity.',
+        message: 'Start local node to load receipts.',
       });
       return;
     }
@@ -314,7 +314,7 @@ export function VaultDashboard() {
     if (showLoading) {
       setTimelineState({
         phase: 'loading',
-        message: 'Refreshing activity.',
+        message: 'Refreshing receipts.',
       });
     }
 
@@ -332,10 +332,7 @@ export function VaultDashboard() {
       setTimelineEntries(nextEntries);
       setTimelineState({
         phase: 'success',
-        message:
-          nextEntries.length > 0
-            ? `Showing ${nextEntries.length} recent events.`
-            : 'No activity yet.',
+        message: nextEntries.length > 0 ? 'Recent receipts loaded.' : 'No receipts yet.',
       });
     } catch (error) {
       if (requestId !== timelineRequestIdRef.current) {
@@ -412,7 +409,7 @@ export function VaultDashboard() {
       setPolicyLookupId(policyId);
       setPolicyLookupState({
         phase: 'success',
-        message: options?.successMessage ?? 'Policy loaded.',
+        message: options?.successMessage ?? 'Policy ready.',
       });
     } catch (error) {
       if (!options?.preserveOnError) {
@@ -575,7 +572,6 @@ export function VaultDashboard() {
         args: [connectedOwner, policyVaultContract.address],
       });
 
-      let approvalWasSent = false;
       if (currentAllowance < amount) {
         const approvalSimulation = await reader.simulateContract({
           ...mockUsdcContract,
@@ -592,7 +588,6 @@ export function VaultDashboard() {
         });
 
         const approvalHash = await signer.writeContract(approvalSimulation.request);
-        approvalWasSent = true;
         setFundingActionState({
           phase: 'pending',
           mode: 'approve',
@@ -614,7 +609,7 @@ export function VaultDashboard() {
         phase: 'pending',
         mode: 'approve',
         step: 'depositing',
-        message: 'Deposit pending.',
+        message: 'Funding pending.',
       });
 
       const depositHash = await signer.writeContract(depositSimulation.request);
@@ -622,24 +617,20 @@ export function VaultDashboard() {
         phase: 'pending',
         mode: 'approve',
         step: 'depositing',
-        message: 'Deposit pending.',
+        message: 'Funding pending.',
         txHash: depositHash,
       });
 
       await reader.waitForTransactionReceipt({ hash: depositHash });
       await refreshDashboardReads();
 
-        setFundingActionState({
-          phase: 'success',
-          mode: 'approve',
-          message: approvalWasSent ? 'Approval complete. Vault funded.' : 'Vault funded.',
-          txHash: depositHash,
-        });
-      recordLastAction(
-        'live',
-        approvalWasSent ? 'Approval complete. Vault funded.' : 'Vault funded.',
-        depositHash,
-      );
+      setFundingActionState({
+        phase: 'success',
+        mode: 'approve',
+        message: 'Vault funded.',
+        txHash: depositHash,
+      });
+      recordLastAction('live', 'Vault funded.', depositHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
       const message = getActionErrorMessage(error);
@@ -677,7 +668,7 @@ export function VaultDashboard() {
         phase: 'pending',
         mode: 'permit',
         step: 'signing',
-        message: 'Check the wallet to sign the permit.',
+        message: 'Sign in wallet.',
       });
 
       const signature = await signer.signTypedData({
@@ -706,7 +697,7 @@ export function VaultDashboard() {
         phase: 'pending',
         mode: 'permit',
         step: 'depositing',
-        message: 'Permit deposit pending.',
+        message: 'Funding pending.',
       });
 
       const depositHash = await signer.writeContract(permitSimulation.request);
@@ -714,7 +705,7 @@ export function VaultDashboard() {
         phase: 'pending',
         mode: 'permit',
         step: 'depositing',
-        message: 'Permit deposit pending.',
+        message: 'Funding pending.',
         txHash: depositHash,
       });
 
@@ -724,10 +715,10 @@ export function VaultDashboard() {
       setFundingActionState({
         phase: 'success',
         mode: 'permit',
-        message: 'Permit complete. Vault funded.',
+        message: 'Vault funded.',
         txHash: depositHash,
       });
-      recordLastAction('live', 'Permit complete. Vault funded.', depositHash);
+      recordLastAction('live', 'Vault funded.', depositHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
       const message = getActionErrorMessage(error);
@@ -759,14 +750,14 @@ export function VaultDashboard() {
       setCreatePolicyState({
         phase: 'pending',
         action: 'create',
-        message: 'Create policy pending.',
+        message: 'Creating policy.',
       });
 
       const createHash = await signer.writeContract(createSimulation.request);
       setCreatePolicyState({
         phase: 'pending',
         action: 'create',
-        message: 'Create policy pending.',
+        message: 'Creating policy.',
         txHash: createHash,
       });
 
@@ -820,14 +811,14 @@ export function VaultDashboard() {
       setPolicyActionState({
         phase: 'pending',
         action: 'charge',
-        message: 'Charge pending.',
+        message: 'Charging.',
       });
 
       const chargeHash = await signer.writeContract(chargeSimulation.request);
       setPolicyActionState({
         phase: 'pending',
         action: 'charge',
-        message: 'Charge pending.',
+        message: 'Charging.',
         txHash: chargeHash,
       });
 
@@ -838,10 +829,10 @@ export function VaultDashboard() {
       setPolicyActionState({
         phase: 'success',
         action: 'charge',
-        message: 'Charge confirmed.',
+        message: 'Charge complete.',
         txHash: chargeHash,
       });
-      recordLastAction('live', 'Charge confirmed.', chargeHash);
+      recordLastAction('live', 'Charge complete.', chargeHash);
     } catch (error) {
       await refreshDashboardReads().catch(() => undefined);
       const message = getActionErrorMessage(error);
@@ -871,14 +862,14 @@ export function VaultDashboard() {
       setPolicyActionState({
         phase: 'pending',
         action: 'revoke',
-        message: 'Revoke pending.',
+        message: 'Revoking policy.',
       });
 
       const revokeHash = await signer.writeContract(revokeSimulation.request);
       setPolicyActionState({
         phase: 'pending',
         action: 'revoke',
-        message: 'Revoke pending.',
+        message: 'Revoking policy.',
         txHash: revokeHash,
       });
 
@@ -923,14 +914,14 @@ export function VaultDashboard() {
       setPolicyActionState({
         phase: 'pending',
         action: 'withdraw',
-        message: 'Withdraw pending.',
+        message: 'Withdrawing funds.',
       });
 
       const withdrawHash = await signer.writeContract(withdrawSimulation.request);
       setPolicyActionState({
         phase: 'pending',
         action: 'withdraw',
-        message: 'Withdraw pending.',
+        message: 'Withdrawing funds.',
         txHash: withdrawHash,
       });
 
@@ -968,69 +959,69 @@ export function VaultDashboard() {
 
   const walletStateNote =
     contractReadiness.kind === 'missing-addresses'
-      ? 'Sync a local deploy to continue.'
+      ? 'Sync deployment first.'
       : contractReadiness.kind === 'rpc-unavailable'
-        ? 'Start the local node.'
+        ? 'Start local node.'
         : contractReadiness.kind === 'checking-contracts'
-          ? 'Checking vault availability.'
+          ? 'Checking vault.'
           : contractReadiness.kind === 'missing-bytecode'
-            ? `${describeMissingContracts(contractReadiness.missingContracts)} missing on this node. Redeploy and sync.`
+            ? `${describeMissingContracts(contractReadiness.missingContracts)} missing. Redeploy and sync.`
             : !isConnected
-              ? 'Connect owner or beneficiary wallet.'
+              ? 'Connect a wallet.'
               : !isExpectedChain
                 ? `Switch to local chain (${contractConfig.chainId}).`
                 : accountReads.error
                   ? `Balance reads failed: ${getActionErrorMessage(accountReads.error)}`
-                  : `Vault ready at ${shortAddress(policyVaultContract.address)}.`;
+                  : 'Ready for vault actions.';
 
   const timelineContractStatus =
     contractReadiness.kind === 'missing-addresses'
       ? {
-          detail: 'Sync a local deploy to load activity.',
-          label: 'Missing local deploy',
+          detail: 'Sync deployment to load receipts.',
+          label: 'Missing deploy',
           tone: 'warning' as const,
         }
       : contractReadiness.kind === 'rpc-unavailable'
         ? {
-            detail: 'Start the local node to load activity.',
+            detail: 'Start local node to load receipts.',
             label: 'RPC offline',
             tone: 'warning' as const,
           }
         : contractReadiness.kind === 'checking-contracts'
           ? {
-              detail: 'Checking vault availability.',
-              label: 'Checking contracts',
+              detail: 'Checking vault.',
+              label: 'Checking',
               tone: 'muted' as const,
             }
           : contractReadiness.kind === 'missing-bytecode'
             ? {
-                detail: `${describeMissingContracts(contractReadiness.missingContracts)} missing on this node. Redeploy and sync.`,
+                detail: `${describeMissingContracts(contractReadiness.missingContracts)} missing. Redeploy and sync.`,
                 label: 'No contract code',
                 tone: 'warning' as const,
               }
             : {
-                detail: 'Vault ready. Activity updates here.',
-                label: 'Demo ready',
+                detail: 'Ready for live receipts.',
+                label: 'Ready',
                 tone: 'live' as const,
               };
 
   const allowanceHint = depositAmountError
     ? depositAmountError
     : parsedDepositAmount === undefined
-      ? 'Approval if needed. Permit funds in one signature.'
+      ? 'Choose a funding path.'
       : allowanceCoversAmount
-        ? 'Ready to fund this amount.'
-        : 'Approval required for this amount.';
+        ? 'Ready to fund.'
+        : 'Approval needed first.';
 
   return (
     <section className="workspace-grid">
       <section className="workflow-shell">
         <div className="surface-heading">
           <div>
-            <p className="section-kicker">Workflow</p>
-            <h2 className="surface-title">Fund, create, and use.</h2>
+            <p className="section-kicker">Flow</p>
+            <h2 className="surface-title">Spend flow</h2>
           </div>
-          <p className="surface-copy">Move funds in, set a policy, then operate it.</p>
+          <p className="surface-copy">Fund the vault, set limits, and use the policy.</p>
         </div>
 
         <div className="workflow-panels">
@@ -1117,9 +1108,9 @@ export function VaultDashboard() {
         <div className="surface-heading context-heading">
           <div>
             <p className="section-kicker">Overview</p>
-            <h2 className="surface-title">Wallet, status, activity.</h2>
+            <h2 className="surface-title">Wallet overview</h2>
           </div>
-          <p className="surface-copy">Balances, readiness, and recent receipts.</p>
+          <p className="surface-copy">Balance, status, and receipts.</p>
         </div>
 
         <div className="context-sections">
@@ -1136,7 +1127,6 @@ export function VaultDashboard() {
             onConnect={handleConnect}
             onDisconnect={() => disconnect()}
             tokenBalance={formatTokenAmount(walletBalance, tokenDecimals, tokenSymbol)}
-            tokenLabel={tokenSymbol}
             vaultBalance={formatTokenAmount(vaultBalance, tokenDecimals, tokenSymbol)}
           />
 
